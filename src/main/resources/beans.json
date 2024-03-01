@@ -1,0 +1,22 @@
+{
+  "beans": [
+    {
+      "class": "com.example.services.MyService",
+      "name": "myService",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeProperty": "value1",
+        "setAnotherProperty": 5
+      },
+      "constructorParams": ["dependency1", "dependency2"]
+    },
+    {
+      "class": "com.example.repository.MyRepository",
+      "name": "myRepositoryImpl",
+      "scope": "prototype",
+      "initParams": {
+        "setDataSource": "myDataSource"
+      }
+    }
+  ]
+}
