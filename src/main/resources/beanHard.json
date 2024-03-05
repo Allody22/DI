@@ -1,0 +1,43 @@
+{
+  "beans": [
+    {
+      "class": "ru.nsu.hard.MySingletonService",
+      "name": "mySingletonService",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeSingletonProperty": "singletonValue"
+      },
+      "constructorParams": [
+        "ru.nsu.hard.MyPrototypeRepository",
+        "ru.nsu.hard.MySingletonRepository"
+      ]
+    },
+    {
+      "class": "ru.nsu.hard.MyPrototypeService",
+      "name": "myPrototypeService",
+      "scope": "prototype",
+      "initParams": {
+        "setSomePrototypeProperty": "prototypeValue"
+      },
+      "constructorParams": [
+        "ru.nsu.hard.MyPrototypeRepository"
+      ]
+    },
+    {
+      "class": "ru.nsu.hard.MySingletonRepository",
+      "name": "mySingletonRepository",
+      "scope": "singleton",
+      "initParams": {
+        "setDataSource": "singletonDataSource"
+      }
+    },
+    {
+      "class": "ru.nsu.hard.MyPrototypeRepository",
+      "name": "myPrototypeRepository",
+      "scope": "prototype",
+      "initParams": {
+        "setDataSource": "prototypeDataSource"
+      }
+    }
+  ]
+}

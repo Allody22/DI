@@ -1,17 +1,19 @@
 {
   "beans": [
     {
-      "class": "com.example.services.MyService",
+      "class": "ru.nsu.services.MyService",
       "name": "myService",
       "scope": "singleton",
       "initParams": {
         "setSomeProperty": "value1",
         "setAnotherProperty": 5
       },
-      "constructorParams": ["dependency1", "dependency2"]
+      "constructorParams": [
+        "ru.nsu.repository.MyRepository"
+      ]
     },
     {
-      "class": "com.example.repository.MyRepository",
+      "class": "ru.nsu.repository.MyRepository",
       "name": "myRepositoryImpl",
       "scope": "prototype",
       "initParams": {
