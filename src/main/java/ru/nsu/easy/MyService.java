@@ -1,7 +1,6 @@
-package ru.nsu.services;
+package ru.nsu.easy;
 
 import lombok.Data;
-import ru.nsu.repository.MyRepository;
 
 @Data
 public class MyService {

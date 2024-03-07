@@ -10,20 +10,21 @@ import ru.nsu.services.ServicesInstantiationServiceImpl;
 import java.io.IOException;
 
 @Slf4j
-public class HardMain {
+public class VeryHardMain {
     public static void main(String[] args) throws IOException {
         // Сначала надо прочитать json
-        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beanHard.json");
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beansVeryHard.json");
 
         //Сканируем информацию
         ScanningConfig scanningConfig = new ScanningConfig();
         scanningConfig.startBeanScanning(beanDefinitions);
-//        System.out.println("scanning = " + scanningConfig);
+        System.out.println("scanning = " + scanningConfig);
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
         ServicesInstantiationServiceImpl instantiationService = new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
 
         // Инстанцируем и регистрируем бины
         instantiationService.instantiateAndRegisterBeans();
-        log.info("Singleton beans = " + instantiationService.getDependencyContainer().getSingletonInstances());
+        log.info("Singleton beans = " + dependencyContainer.getSingletonInstances());
+        log.info("Thread beans = " + dependencyContainer.getThreadInstances());
     }
 }

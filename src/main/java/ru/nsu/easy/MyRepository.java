@@ -1,4 +1,4 @@
-package ru.nsu.repository;
+package ru.nsu.easy;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;

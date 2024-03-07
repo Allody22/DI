@@ -1,50 +1,54 @@
-package ru.nsu.config;
+package ru.nsu.services;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ru.nsu.model.BeanDefinition;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 @Data
+@NoArgsConstructor
 @Slf4j
-public class ServicesInstantiationServiceImpl {
+public class DependencyContainerImp {
+    private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
+    private Map<String, Object> singletonInstances = new HashMap<>();
+    private Map<String, ThreadLocal<Object>> threadInstances = new HashMap<>();
 
-    private final DependencyContainerImp dependencyContainer;
-    private final ScanningConfig scanningConfig;
+    private ScanningConfig scanningConfig;
 
-    public ServicesInstantiationServiceImpl(DependencyContainerImp dependencyContainer, ScanningConfig scanningConfig) {
-        this.dependencyContainer = dependencyContainer;
+    public DependencyContainerImp(ScanningConfig scanningConfig){
         this.scanningConfig = scanningConfig;
     }
 
-    public void instantiateAndRegisterBeans() {
-        // Перебираем все бины и регистрируем их определения в контейнере
-        scanningConfig.getSingletonBeans().values().forEach(beanDefinition ->
-                dependencyContainer.registerBeanDefinition(beanDefinition.getClassName(), beanDefinition));
-        scanningConfig.getPrototypeBeans().values().forEach(beanDefinition ->
-                dependencyContainer.registerBeanDefinition(beanDefinition.getClassName(), beanDefinition));
-        scanningConfig.getThreadBeans().values().forEach(beanDefinition ->
-                dependencyContainer.registerBeanDefinition(beanDefinition.getClassName(), beanDefinition));
-
-        // Обработка singleton бинов
-        instantiateAndRegisterScopeBeans(scanningConfig.getSingletonBeans(), "singleton");
-        // Обработка prototype бинов
-        instantiateAndRegisterScopeBeans(scanningConfig.getPrototypeBeans(), "prototype");
-        // Обработка thread бинов
-        instantiateAndRegisterScopeBeans(scanningConfig.getThreadBeans(), "thread");
+    @SuppressWarnings("all")
+    public <T> T getBeanByName(String name) {
+        BeanDefinition definition = beanDefinitions.get(name);
+        if (definition == null) {
+            throw new IllegalArgumentException("В джейсоне не было найдено бина с именем: " + name);
+        }
+        return switch (definition.getScope()) {
+            case "singleton" -> (T) singletonInstances.get(name);
+            case "prototype" -> (T) createBeanInstance(definition);
+            case "thread" -> getThreadLocalBean(name);
+            default ->
+                    throw new IllegalArgumentException("Неподдерживаемый тип жизненного цикла: " + definition.getScope()
+                            + " для бина с именем " + name);
+        };
     }
 
-    private void instantiateAndRegisterScopeBeans(Map<String, BeanDefinition> beans, String scope) {
-        beans.values().forEach(beanDefinition -> {
-            if (!dependencyContainer.containsBean(beanDefinition.getName())) {
-                Object beanInstance = createBeanInstance(beanDefinition);
-                dependencyContainer.registerBeanInstance(beanDefinition.getClassName(), beanInstance);
-            }
-        });
+    @SuppressWarnings("all")
+    public <T> T getThreadLocalBean(String name) {
+        ThreadLocal<?> threadLocal = threadInstances.get(name);
+        if (threadLocal != null) {
+            return (T) threadLocal.get();
+        }
+        return null;
     }
 
     public Object createBeanInstance(BeanDefinition beanDefinition) {
@@ -61,7 +65,7 @@ public class ServicesInstantiationServiceImpl {
             applyInitParams(instance, beanDefinition.getInitParams());
             return instance;
         } catch (Exception e) {
-            throw new RuntimeException("Не получилось инициализировать бин с именем " + beanDefinition.getClassName(), e);
+            throw new RuntimeException("Failed to create bean instance for " + beanDefinition.getClassName(), e);
         }
     }
 
@@ -81,7 +85,7 @@ public class ServicesInstantiationServiceImpl {
             }
             boolean matches = true;
             for (int i = 0; i < paramTypes.length; i++) {
-                BeanDefinition paramDefinition = dependencyContainer.getBeanDefinitionByName((String) constructorParams.get(i));
+                BeanDefinition paramDefinition = getBeanDefinitionByName((String) constructorParams.get(i));
                 if (paramDefinition == null) {
                     log.info("Не нашли конструктор");
                     matches = false;
@@ -104,7 +108,7 @@ public class ServicesInstantiationServiceImpl {
         Object[] params = new Object[constructorParams.size()];
         for (int i = 0; i < constructorParams.size(); i++) {
             String beanName = (String) constructorParams.get(i);
-            Object paramInstance = dependencyContainer.getBeanByName(beanName);
+            Object paramInstance = getBeanByName(beanName);
             if (paramInstance == null) {
                 BeanDefinition depBeanDefinition = scanningConfig.findBeanDefinition(beanName);
                 if (depBeanDefinition == null) {
@@ -112,14 +116,12 @@ public class ServicesInstantiationServiceImpl {
                 }
                 paramInstance = createBeanInstance(depBeanDefinition);
                 // Вместо регистрации BeanDefinition как экземпляра, создаем и регистрируем реальный объект
-                dependencyContainer.registerBeanInstance(beanName, paramInstance);
+                registerBeanInstance(beanName, paramInstance);
             }
             params[i] = paramInstance;
         }
         return params;
     }
-
-
 
     private Class<?> getClassForName(String className) {
         try {
@@ -153,4 +155,41 @@ public class ServicesInstantiationServiceImpl {
         }
         throw new NoSuchMethodException(clazz.getName() + "." + methodName + "(...)");
     }
+
+    public boolean containsBean(String beanName) {
+        return singletonInstances.containsKey(beanName) || threadInstances.containsKey(beanName);
+    }
+
+    public void registerBeanDefinition(String name, BeanDefinition beanDefinition) {
+        beanDefinitions.put(name, beanDefinition);
+    }
+
+
+    public void registerBeanInstance(String name, Object beanInstance) {
+        BeanDefinition definition = beanDefinitions.get(name);
+        if (definition != null) {
+            switch (definition.getScope()) {
+                case "singleton":
+                    singletonInstances.put(name, beanInstance);
+                    break;
+                case "thread":
+                    registerThreadLocalBean(name, () -> createBeanInstance(definition));
+                    break;
+
+            }
+        } else {
+            throw new IllegalArgumentException("No bean definition found for " + name);
+        }
+    }
+
+
+    public BeanDefinition getBeanDefinitionByName(String name) {
+        return beanDefinitions.get(name);
+    }
+
+    public void registerThreadLocalBean(String name, Supplier<?> beanSupplier) {
+        threadInstances.put(name, ThreadLocal.withInitial(beanSupplier));
+    }
+
 }
+

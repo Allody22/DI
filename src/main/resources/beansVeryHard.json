@@ -1,0 +1,75 @@
+{
+  "beans": [
+    {
+      "class": "ru.nsu.test.hard.MyAppConfig",
+      "name": "myAppConfig",
+      "scope": "singleton"
+    },
+    {
+      "class": "ru.nsu.test.hard.UserManagementService",
+      "name": "userManagementService",
+      "scope": "singleton",
+      "constructorParams": [
+        "ru.nsu.test.hard.UserDataRepository",
+        "ru.nsu.test.hard.NotificationService"
+      ]
+    },
+    {
+      "class": "ru.nsu.test.hard.NotificationService",
+      "name": "notificationService",
+      "scope": "singleton",
+      "constructorParams": [
+        "ru.nsu.test.hard.EmailService",
+        "ru.nsu.test.hard.DataSource"
+      ]
+    },
+    {
+      "class": "ru.nsu.test.hard.UserDataRepository",
+      "name": "userDataRepository",
+      "scope": "singleton",
+      "initParams": {
+        "setDataSource": "DataSourceBean"
+      }
+    },
+    {
+      "class": "ru.nsu.test.hard.EmailService",
+      "name": "emailService",
+      "scope": "prototype",
+      "initParams": {
+        "setConfig": "mailConfig"
+      },
+      "constructorParams": [
+        "ru.nsu.test.hard.DataSource"
+      ]
+    },
+    {
+      "class": "ru.nsu.test.hard.ThreadLocalContext",
+      "name": "threadLocalContext",
+      "scope": "thread",
+      "constructorParams": [
+        "ru.nsu.test.hard.UserDataRepository"
+      ]
+    },
+    {
+      "class": "ru.nsu.test.hard.DataSource",
+      "name": "DataSourceBean",
+      "scope": "singleton",
+      "initParams": {
+        "setUrl": "jdbc:exampleDbUrl",
+        "setUser": "dbUser",
+        "setPassword": "dbPassword"
+      }
+    },
+    {
+      "class": "ru.nsu.test.hard.MailConfig",
+      "name": "mailConfig",
+      "scope": "singleton",
+      "initParams": {
+        "setHost": "smtp.example.com",
+        "setPort": "587",
+        "setUsername": "noreply@example.com",
+        "setPassword": "password"
+      }
+    }
+  ]
+}

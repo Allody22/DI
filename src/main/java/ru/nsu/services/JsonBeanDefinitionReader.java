@@ -1,4 +1,4 @@
-package ru.nsu.config;
+package ru.nsu.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;

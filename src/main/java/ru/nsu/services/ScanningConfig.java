@@ -1,4 +1,4 @@
-package ru.nsu.config;
+package ru.nsu.services;
 
 import lombok.Data;
 import ru.nsu.model.BeanDefinition;
@@ -42,8 +42,17 @@ public class ScanningConfig {
         if (beanDefinition != null) {
             return beanDefinition;
         }
+        beanDefinition = threadBeans.get(beanName);
+        if (beanDefinition != null) {
+            return beanDefinition;
+        }
         // Затем в прототипах
-        return prototypeBeans.get(beanName);
+        beanDefinition = prototypeBeans.get(beanName);
+        if (beanDefinition != null) {
+            return beanDefinition;
+        } else {
+            throw new RuntimeException("Не найден бин с таким именем: " + beanName);
+        }
     }
 
 

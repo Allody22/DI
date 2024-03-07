@@ -1,0 +1,55 @@
+{
+  "beans": [
+    {
+      "class": "ru.nsu.threadsTest.MySingletonService",
+      "name": "mySingletonService",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeSingletonProperty": "singletonValue",
+        "setSomeIntValue" : 1
+      },
+      "constructorParams": [
+        "ru.nsu.threadsTest.MyPrototypeRepository",
+        "ru.nsu.threadsTest.MySingletonRepository",
+        "ru.nsu.threadsTest.MyThreadScopeRepository"
+      ]
+    },
+    {
+      "class": "ru.nsu.threadsTest.MyPrototypeService",
+      "name": "myPrototypeService",
+      "scope": "prototype",
+      "initParams": {
+        "setSomePrototypeProperty": "prototypeValue"
+      },
+      "constructorParams": [
+        "ru.nsu.threadsTest.MyPrototypeRepository"
+      ]
+    },
+    {
+      "class": "ru.nsu.threadsTest.MySingletonRepository",
+      "name": "mySingletonRepository",
+      "scope": "singleton",
+      "initParams": {
+        "setDataSource": "singletonDataSource",
+        "setAnotherStringValue": "anotherStringValue"
+      }
+    },
+    {
+      "class": "ru.nsu.threadsTest.MyPrototypeRepository",
+      "name": "myPrototypeRepository",
+      "scope": "prototype",
+      "initParams": {
+        "setDataSource": "prototypeDataSource"
+      }
+    },
+    {
+      "class": "ru.nsu.threadsTest.MyThreadScopeRepository",
+      "name": "myThreadScopeRepository",
+      "scope": "thread",
+      "initParams": {
+        "setThreadLocalData": "threadSpecificData",
+        "setIntegerThreadData": 1234321123
+      }
+    }
+  ]
+}
