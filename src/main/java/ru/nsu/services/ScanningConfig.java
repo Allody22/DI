@@ -1,6 +1,8 @@
 package ru.nsu.services;
 
 import lombok.Data;
+import ru.nsu.exception.NoDependencyException;
+import ru.nsu.exception.WrongJsonException;
 import ru.nsu.model.BeanDefinition;
 import ru.nsu.model.BeanDefinitionReader;
 import ru.nsu.model.BeanDefinitionsWrapper;
@@ -30,7 +32,7 @@ public class ScanningConfig {
                     getThreadBeans().put(beanDefinition.getClassName(), definition);
                     break;
                 default:
-                    throw new RuntimeException("Какая-то странная область видимости бина");
+                    throw new WrongJsonException(" no such bean scope: " + definition.getScope());
             }
         }
     }
@@ -51,7 +53,7 @@ public class ScanningConfig {
         if (beanDefinition != null) {
             return beanDefinition;
         } else {
-            throw new RuntimeException("Не найден бин с таким именем: " + beanName);
+            throw new NoDependencyException(beanName);
         }
     }
 

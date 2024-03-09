@@ -2,6 +2,7 @@ package ru.nsu.services;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import ru.nsu.exception.*;
 import ru.nsu.model.BeanDefinition;
 
 import java.lang.reflect.Constructor;
@@ -11,39 +12,56 @@ import java.util.Map;
 
 @Data
 @Slf4j
-public class ServicesInstantiationServiceImpl {
+public class BeanControllingService {
 
     private final DependencyContainerImp dependencyContainer;
-    private final ScanningConfig scanningConfig;
 
-    public ServicesInstantiationServiceImpl(DependencyContainerImp dependencyContainer, ScanningConfig scanningConfig) {
+    public BeanControllingService(DependencyContainerImp dependencyContainer) {
         this.dependencyContainer = dependencyContainer;
-        this.scanningConfig = scanningConfig;
+    }
+
+    @SuppressWarnings("all")
+    public <T> T getBeanByName(String name) {
+        BeanDefinition definition = dependencyContainer.getBeanDefinitions().get(name);
+        if (definition == null) {
+            throw new WrongJsonException(" no bean : " + name);
+        }
+        return switch (definition.getScope()) {
+            case "singleton" -> (T) dependencyContainer.getSingletonInstances().get(name);
+            case "prototype" -> (T) createBeanInstance(definition);
+            case "thread" -> dependencyContainer.getThreadLocalBean(name);
+            default ->
+                    throw new WrongJsonException(" no such bean scope: " + definition.getScope());
+        };
     }
 
     public void instantiateAndRegisterBeans() {
-        // Перебираем все бины и регистрируем их определения в контейнере
-        scanningConfig.getSingletonBeans().values().forEach(beanDefinition ->
+        var singletonBeans = dependencyContainer.getScanningConfig().getSingletonBeans();
+        var prototypeBeans = dependencyContainer.getScanningConfig().getPrototypeBeans();
+        var threadBeans = dependencyContainer.getScanningConfig().getThreadBeans();
+
+        singletonBeans.values().forEach(beanDefinition ->
                 dependencyContainer.registerBeanDefinition(beanDefinition.getClassName(), beanDefinition));
-        scanningConfig.getPrototypeBeans().values().forEach(beanDefinition ->
+        prototypeBeans.values().forEach(beanDefinition ->
                 dependencyContainer.registerBeanDefinition(beanDefinition.getClassName(), beanDefinition));
-        scanningConfig.getThreadBeans().values().forEach(beanDefinition ->
+        threadBeans.values().forEach(beanDefinition ->
                 dependencyContainer.registerBeanDefinition(beanDefinition.getClassName(), beanDefinition));
 
         // Обработка singleton бинов
-        instantiateAndRegisterScopeBeans(scanningConfig.getSingletonBeans(), "singleton");
-        // Обработка prototype бинов
-        //TODO подумать нужно ли оно вообще
-        instantiateAndRegisterScopeBeans(scanningConfig.getPrototypeBeans(), "prototype");
+        instantiateAndRegisterScopeBeans(singletonBeans, "singleton");
         // Обработка thread бинов
-        instantiateAndRegisterScopeBeans(scanningConfig.getThreadBeans(), "thread");
+        instantiateAndRegisterScopeBeans(threadBeans, "thread");
     }
 
     private void instantiateAndRegisterScopeBeans(Map<String, BeanDefinition> beans, String scope) {
         beans.values().forEach(beanDefinition -> {
             if (!dependencyContainer.containsBean(beanDefinition.getName())) {
                 Object beanInstance = createBeanInstance(beanDefinition);
-                dependencyContainer.registerBeanInstance(beanDefinition.getClassName(), beanInstance);
+                if (scope.equals("thread")){
+                    dependencyContainer.registerThreadBeanInstance(beanDefinition,  ()->createBeanInstance(beanDefinition));
+                } else if (scope.equals("singleton")) {
+                    dependencyContainer.registerSingletonBeanInstance(beanDefinition, beanInstance);
+                }
             }
         });
     }
@@ -62,7 +80,7 @@ public class ServicesInstantiationServiceImpl {
             applyInitParams(instance, beanDefinition.getInitParams());
             return instance;
         } catch (Exception e) {
-            throw new RuntimeException("Не получилось инициализировать бин с именем " + beanDefinition.getClassName(), e);
+            throw new ConstructorException(beanDefinition.getClassName());
         }
     }
 
@@ -80,40 +98,35 @@ public class ServicesInstantiationServiceImpl {
             if (paramTypes.length != constructorParams.size()) {
                 continue;
             }
-            boolean matches = true;
             for (int i = 0; i < paramTypes.length; i++) {
                 BeanDefinition paramDefinition = dependencyContainer.getBeanDefinitionByName((String) constructorParams.get(i));
                 if (paramDefinition == null) {
-                    log.info("Не нашли конструктор");
-                    matches = false;
-                    break;
+                    throw new EmptyJsonException(beanClass.getName(),"bean name");
                 } else if (!paramTypes[i].isAssignableFrom(getClassForName(paramDefinition.getClassName()))){
-                    log.info("Не подходящие типы для " + paramDefinition.getClassName() + " и для " + paramTypes[i]);
-                    matches = false;
-                    break;
-
+                    throw new ConstructorClassMismatchException(beanClass.getName(),paramTypes[i].toString(), paramDefinition.getClassName());
                 }
             }
-            if (matches) {
                 return constructor;
-            }
         }
-        throw new IllegalArgumentException("Не получилось использовать конструктор для " + beanClass.getName());
+        throw new ConstructorException(beanClass.getName());
     }
 
     private Object[] resolveConstructorParameters(List<Object> constructorParams) {
         Object[] params = new Object[constructorParams.size()];
         for (int i = 0; i < constructorParams.size(); i++) {
             String beanName = (String) constructorParams.get(i);
-            Object paramInstance = dependencyContainer.getBeanByName(beanName);
+            Object paramInstance = getBeanByName(beanName);
             if (paramInstance == null) {
-                BeanDefinition depBeanDefinition = scanningConfig.findBeanDefinition(beanName);
-                if (depBeanDefinition == null) {
-                    throw new IllegalArgumentException("Зависимость не найдена: " + beanName);
+                BeanDefinition beanDefinition = dependencyContainer.getScanningConfig().findBeanDefinition(beanName);
+                if (beanDefinition == null) {
+                    throw new NoDependencyException(beanName);
                 }
-                paramInstance = createBeanInstance(depBeanDefinition);
-                // Вместо регистрации BeanDefinition как экземпляра, создаем и регистрируем реальный объект
-                dependencyContainer.registerBeanInstance(beanName, paramInstance);
+                paramInstance = createBeanInstance(beanDefinition);
+                if (beanDefinition.getScope().equals("thread")){
+                    dependencyContainer.registerThreadBeanInstance(beanDefinition, ()->createBeanInstance(beanDefinition));
+                } else if (beanDefinition.getScope().equals("singleton")) {
+                    dependencyContainer.registerSingletonBeanInstance(beanDefinition, paramInstance);
+                }
             }
             params[i] = paramInstance;
         }
@@ -136,12 +149,12 @@ public class ServicesInstantiationServiceImpl {
         }
         for (Map.Entry<String, Object> entry : initParams.entrySet()) {
             try {
-                String methodName = entry.getKey(); // Используйте ключ напрямую
+                String methodName = entry.getKey();
                 Object value = entry.getValue();
                 Method setterMethod = findMethodByNameAndParameterType(instance.getClass(), methodName, value);
                 setterMethod.invoke(instance, value);
             } catch (Exception e) {
-                throw new RuntimeException("Не получилось инициализировать сеттер " + entry.getKey() + " к " + instance.getClass().getName(), e);
+                throw new SetterException(entry.getKey(), instance.getClass().getName());
             }
         }
     }

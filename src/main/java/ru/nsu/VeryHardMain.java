@@ -2,10 +2,10 @@ package ru.nsu;
 
 import lombok.extern.slf4j.Slf4j;
 import ru.nsu.model.BeanDefinitionsWrapper;
+import ru.nsu.services.BeanControllingService;
 import ru.nsu.services.DependencyContainerImp;
 import ru.nsu.services.JsonBeanDefinitionReader;
 import ru.nsu.services.ScanningConfig;
-import ru.nsu.services.ServicesInstantiationServiceImpl;
 
 import java.io.IOException;
 
@@ -20,7 +20,7 @@ public class VeryHardMain {
         scanningConfig.startBeanScanning(beanDefinitions);
         System.out.println("scanning = " + scanningConfig);
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
-        ServicesInstantiationServiceImpl instantiationService = new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
+        BeanControllingService instantiationService = new BeanControllingService(dependencyContainer);
 
         // Инстанцируем и регистрируем бины
         instantiationService.instantiateAndRegisterBeans();

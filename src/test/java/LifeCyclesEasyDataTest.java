@@ -8,7 +8,7 @@ import ru.nsu.model.BeanDefinitionsWrapper;
 import ru.nsu.services.DependencyContainerImp;
 import ru.nsu.services.JsonBeanDefinitionReader;
 import ru.nsu.services.ScanningConfig;
-import ru.nsu.services.ServicesInstantiationServiceImpl;
+import ru.nsu.services.BeanControllingService;
 
 import java.io.IOException;
 
@@ -27,17 +27,17 @@ public class LifeCyclesEasyDataTest {
 
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
 
-        ServicesInstantiationServiceImpl instantiationService =
-                new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
+        BeanControllingService instantiationService =
+                new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
-        MyPrototypeService firstPrototypeService = dependencyContainer.getBeanByName("ru.nsu.hard.MyPrototypeService");
-        MyPrototypeService secondPrototypeService = dependencyContainer.getBeanByName("ru.nsu.hard.MyPrototypeService");
+        MyPrototypeService firstPrototypeService = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeService");
+        MyPrototypeService secondPrototypeService = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeService");
 
         assertNotSame(firstPrototypeService, secondPrototypeService, "Прототайпы сервисы не должны быть одинаковые");
 
-        MyPrototypeRepository firstPrototypeRepository = dependencyContainer.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
-        MyPrototypeRepository secondPrototypeRepository = dependencyContainer.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
+        MyPrototypeRepository firstPrototypeRepository = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
+        MyPrototypeRepository secondPrototypeRepository = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
         MyPrototypeRepository thirdPrototypeRepository = firstPrototypeService.getMyPrototypeRepository();
         MyPrototypeRepository fourthPrototypeRepository = secondPrototypeService.getMyPrototypeRepository();
 
@@ -65,17 +65,17 @@ public class LifeCyclesEasyDataTest {
 
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
 
-        ServicesInstantiationServiceImpl instantiationService =
-                new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
+        BeanControllingService instantiationService =
+                new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
-        MySingletonService firstSingletonService = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonService");
-        MySingletonService secondSingletonService = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonService");
+        MySingletonService firstSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
+        MySingletonService secondSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
 
         assertSame(firstSingletonService, secondSingletonService, "Синглетон сервисы должны быть одинаковые");
 
-        MySingletonRepository firstSingletonRepository = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonRepository");
-        MySingletonRepository secondSingletonRepository = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonRepository");
+        MySingletonRepository firstSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
+        MySingletonRepository secondSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
 
         assertSame(firstSingletonRepository, secondSingletonRepository, "Синглетон сервисы должны быть одинаковые");
     }
@@ -90,12 +90,12 @@ public class LifeCyclesEasyDataTest {
 
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
 
-        ServicesInstantiationServiceImpl instantiationService =
-                new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
+        BeanControllingService instantiationService =
+                new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
-        MySingletonService firstSingletonService = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonService");
-        MySingletonService secondSingletonService = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonService");
+        MySingletonService firstSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
+        MySingletonService secondSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
 
         assertAll(
                 () -> assertEquals(firstSingletonService.getSomeSingletonProperty(), secondSingletonService.getSomeSingletonProperty(), "Значение someSingletonProperty в MySingletonService должно быть 'singletonValue'"),
@@ -104,8 +104,8 @@ public class LifeCyclesEasyDataTest {
         );
 
 
-        MySingletonRepository firstSingletonRepository = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonRepository");
-        MySingletonRepository secondSingletonRepository = dependencyContainer.getBeanByName("ru.nsu.hard.MySingletonRepository");
+        MySingletonRepository firstSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
+        MySingletonRepository secondSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
 
         assertAll(
                 () -> assertEquals(firstSingletonRepository.getDataSource(), secondSingletonRepository.getDataSource(), "Значение dataSource в MySingletonRepository должно быть 'singletonDataSource'"),
@@ -113,10 +113,10 @@ public class LifeCyclesEasyDataTest {
                 () -> assertEquals(secondSingletonRepository.getDataSource(), "singletonDataSource", "Значение dataSource в MySingletonRepository должно быть 'singletonDataSource'")
         );
 
-        MyPrototypeService myPrototypeService = dependencyContainer.getBeanByName("ru.nsu.hard.MyPrototypeService");
+        MyPrototypeService myPrototypeService = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeService");
         assertEquals(myPrototypeService.getSomePrototypeProperty(), "prototypeValue", "Значение somePrototypeValue в MyPrototypeService должно быть 'prototypeValue'");
 
-        MyPrototypeRepository myPrototypeRepository = dependencyContainer.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
+        MyPrototypeRepository myPrototypeRepository = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
         assertEquals(myPrototypeRepository.getDataSource(), "prototypeDataSource", "Значение dataSource в MyPrototypeRepository должно быть 'prototypeDataSource'");
 
     }

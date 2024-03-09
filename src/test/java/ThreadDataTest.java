@@ -4,7 +4,7 @@ import ru.nsu.model.BeanDefinitionsWrapper;
 import ru.nsu.services.DependencyContainerImp;
 import ru.nsu.services.JsonBeanDefinitionReader;
 import ru.nsu.services.ScanningConfig;
-import ru.nsu.services.ServicesInstantiationServiceImpl;
+import ru.nsu.services.BeanControllingService;
 import ru.nsu.threadsTest.MySingletonRepository;
 import ru.nsu.threadsTest.MySingletonService;
 import ru.nsu.threadsTest.MyThreadScopeRepository;
@@ -30,17 +30,17 @@ public class ThreadDataTest {
 
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
 
-        ServicesInstantiationServiceImpl instantiationService =
-                new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
+        BeanControllingService instantiationService =
+                new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
-        MySingletonService firstSingletonService = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MySingletonService");
-        MySingletonService secondSingletonService = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MySingletonService");
+        MySingletonService firstSingletonService = instantiationService.getBeanByName("ru.nsu.threadsTest.MySingletonService");
+        MySingletonService secondSingletonService = instantiationService.getBeanByName("ru.nsu.threadsTest.MySingletonService");
 
         assertSame(firstSingletonService, secondSingletonService, "Синглетон сервисы должны быть одинаковые");
 
-        MySingletonRepository firstSingletonRepository = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MySingletonRepository");
-        MySingletonRepository secondSingletonRepository = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MySingletonRepository");
+        MySingletonRepository firstSingletonRepository = instantiationService.getBeanByName("ru.nsu.threadsTest.MySingletonRepository");
+        MySingletonRepository secondSingletonRepository = instantiationService.getBeanByName("ru.nsu.threadsTest.MySingletonRepository");
 
         assertSame(firstSingletonRepository, secondSingletonRepository, "Синглетон репозитории должны быть одинаковые");
     }
@@ -55,7 +55,7 @@ public class ThreadDataTest {
 
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
 
-        ServicesInstantiationServiceImpl instantiationService = new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
+        BeanControllingService instantiationService = new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
         final int numberOfThreads = 2;
@@ -67,7 +67,7 @@ public class ThreadDataTest {
             final int threadIndex = i;
             executorService.submit(() -> {
                 try {
-                    threadScopeBeans[threadIndex] = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository");
+                    threadScopeBeans[threadIndex] = instantiationService.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository");
                 } finally {
                     latch.countDown();
                 }
@@ -92,22 +92,20 @@ public class ThreadDataTest {
 
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
 
-        ServicesInstantiationServiceImpl instantiationService = new ServicesInstantiationServiceImpl(dependencyContainer, scanningConfig);
+        BeanControllingService instantiationService = new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
         final MyThreadScopeRepository[] firstThreadBean = new MyThreadScopeRepository[1];
         final MyThreadScopeRepository[] secondThreadBean = new MyThreadScopeRepository[1];
 
         Thread thread1 = new Thread(() -> {
-            firstThreadBean[0] = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository");
+            firstThreadBean[0] = instantiationService.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository");
             // Запрашиваем бин второй раз в том же потоке, чтобы проверить, что он тот же самый
-            MyThreadScopeRepository sameThreadBean = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository");
+            MyThreadScopeRepository sameThreadBean = instantiationService.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository");
             assertSame(firstThreadBean[0], sameThreadBean, "Thread бины с одним названием должны быть одинаковые в пределах одного потока");
         });
 
-        Thread thread2 = new Thread(() -> {
-            secondThreadBean[0] = dependencyContainer.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository");
-        });
+        Thread thread2 = new Thread(() -> secondThreadBean[0] = instantiationService.getBeanByName("ru.nsu.threadsTest.MyThreadScopeRepository"));
 
         thread1.start();
         thread2.start();
