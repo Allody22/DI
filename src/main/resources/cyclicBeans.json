@@ -1,0 +1,80 @@
+{
+  "beans": [
+    {
+      "class": "com.example.MyAppConfig",
+      "name": "myAppConfig",
+      "scope": "singleton",
+      "initParams": {},
+      "constructorParams": []
+    },
+    {
+      "class": "com.example.services.UserManagementService",
+      "name": "userManagementService",
+      "scope": "singleton",
+      "initParams": {},
+      "constructorParams": [
+        "userDataRepository",
+        "notificationService"
+      ]
+    },
+    {
+      "class": "com.example.services.NotificationService",
+      "name": "notificationService",
+      "scope": "singleton",
+      "initParams": {},
+      "constructorParams": [
+        "emailService"
+      ]
+    },
+    {
+      "class": "com.example.repositories.UserDataRepository",
+      "name": "userDataRepository",
+      "scope": "singleton",
+      "initParams": {
+        "setDataSource": "DataSourceBean"
+      },
+      "constructorParams": []
+    },
+    {
+      "class": "com.example.services.EmailService",
+      "name": "emailService",
+      "scope": "prototype",
+      "initParams": {
+        "setConfig": "mailConfig"
+      },
+      "constructorParams": []
+    },
+    {
+      "class": "com.example.ThreadLocalContext",
+      "name": "threadLocalContext",
+      "scope": "thread",
+      "initParams": {},
+      "constructorParams": [
+        "userDataRepository"
+      ]
+    },
+    {
+      "class": "com.example.DataSource",
+      "name": "DataSourceBean",
+      "scope": "singleton",
+      "initParams": {
+        "setUrl": "jdbc:exampleDbUrl",
+        "setUser": "dbUser",
+        "setPassword": "dbPassword"
+      },
+      "constructorParams": []
+    },
+    {
+      "class": "com.example.MailConfig",
+      "name": "mailConfig",
+      "scope": "singleton",
+      "initParams": {
+        "setHost": "smtp.example.com",
+        "setPort": "587",
+        "setUsername": "noreply@example.com",
+        "setPassword": "password"
+      },
+      "constructorParams": []
+    }
+  ]
+}
