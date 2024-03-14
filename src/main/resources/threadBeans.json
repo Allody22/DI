@@ -1,7 +1,7 @@
 {
   "beans": [
     {
-      "class": "ru.nsu.threadsTest.MySingletonService",
+      "class": "ru.nsu.test.threadsTest.MySingletonService",
       "name": "mySingletonService",
       "scope": "singleton",
       "initParams": {
@@ -9,24 +9,24 @@
         "setSomeIntValue" : 1
       },
       "constructorParams": [
-        "ru.nsu.threadsTest.MyPrototypeRepository",
-        "ru.nsu.threadsTest.MySingletonRepository",
-        "ru.nsu.threadsTest.MyThreadScopeRepository"
+        "ru.nsu.test.threadsTest.MyPrototypeRepository",
+        "ru.nsu.test.threadsTest.MySingletonRepository",
+        "ru.nsu.test.threadsTest.MyThreadScopeRepository"
       ]
     },
     {
-      "class": "ru.nsu.threadsTest.MyPrototypeService",
+      "class": "ru.nsu.test.threadsTest.MyPrototypeService",
       "name": "myPrototypeService",
       "scope": "prototype",
       "initParams": {
         "setSomePrototypeProperty": "prototypeValue"
       },
       "constructorParams": [
-        "ru.nsu.threadsTest.MyPrototypeRepository"
+        "ru.nsu.test.threadsTest.MyPrototypeRepository"
       ]
     },
     {
-      "class": "ru.nsu.threadsTest.MySingletonRepository",
+      "class": "ru.nsu.test.threadsTest.MySingletonRepository",
       "name": "mySingletonRepository",
       "scope": "singleton",
       "initParams": {
@@ -35,7 +35,7 @@
       }
     },
     {
-      "class": "ru.nsu.threadsTest.MyPrototypeRepository",
+      "class": "ru.nsu.test.threadsTest.MyPrototypeRepository",
       "name": "myPrototypeRepository",
       "scope": "prototype",
       "initParams": {
@@ -43,7 +43,7 @@
       }
     },
     {
-      "class": "ru.nsu.threadsTest.MyThreadScopeRepository",
+      "class": "ru.nsu.test.threadsTest.MyThreadScopeRepository",
       "name": "myThreadScopeRepository",
       "scope": "thread",
       "initParams": {

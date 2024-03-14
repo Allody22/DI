@@ -1,4 +1,4 @@
-package ru.nsu.easy;
+package ru.nsu.test.easy;
 
 import lombok.Data;
 

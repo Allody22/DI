@@ -1,12 +1,12 @@
-package ru.nsu.hard;
+package ru.nsu.test.easy;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
-public class MyPrototypeRepository {
+public class MyRepository {
+
     private String dataSource;
+
 }

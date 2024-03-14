@@ -10,21 +10,21 @@ import ru.nsu.services.ScanningConfig;
 import java.io.IOException;
 
 @Slf4j
-public class ThreadBeansMain {
+public class Main {
     public static void main(String[] args) throws IOException {
-        // Сначала надо прочитать json
-        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("threadBeans.json");
+        // Сначала надо прочитать json. Выбираем какой хотим
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
 
         //Сканируем информацию
         ScanningConfig scanningConfig = new ScanningConfig();
         scanningConfig.startBeanScanning(beanDefinitions);
-//        System.out.println("scanning = " + scanningConfig);
+        System.out.println("scanning config = " + scanningConfig);
+
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
         BeanControllingService instantiationService = new BeanControllingService(dependencyContainer);
 
         // Инстанцируем и регистрируем бины
         instantiationService.instantiateAndRegisterBeans();
-        log.info("Singleton beans = " + dependencyContainer.getSingletonInstances());
-        log.info("Thread beans = " + dependencyContainer.getThreadInstances());
+        System.out.println("Dependency Container = " + instantiationService.getDependencyContainer().getSingletonInstances());
     }
 }

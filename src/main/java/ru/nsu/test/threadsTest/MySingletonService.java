@@ -1,4 +1,4 @@
-package ru.nsu.hard;
+package ru.nsu.test.threadsTest;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -9,12 +9,18 @@ public class MySingletonService {
 
     private String someSingletonProperty;
 
+    private Integer someIntValue;
+
     private final MyPrototypeRepository myPrototypeRepository;
 
     private final MySingletonRepository mySingletonRepository;
 
-    public MySingletonService(MyPrototypeRepository myPrototypeRepository, MySingletonRepository mySingletonRepository){
+    private final MyThreadScopeRepository myThreadScopeRepository;
+
+    public MySingletonService(MyPrototypeRepository myPrototypeRepository, MySingletonRepository mySingletonRepository,
+                              MyThreadScopeRepository myThreadScopeRepository){
         this.myPrototypeRepository = myPrototypeRepository;
         this.mySingletonRepository = mySingletonRepository;
+        this.myThreadScopeRepository = myThreadScopeRepository;
     }
 }

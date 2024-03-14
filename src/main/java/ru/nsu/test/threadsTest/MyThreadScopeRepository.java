@@ -1,4 +1,4 @@
-package ru.nsu.threadsTest;
+package ru.nsu.test.threadsTest;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
