@@ -2,6 +2,7 @@ package ru.nsu.services;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import ru.nsu.exception.*;
 import ru.nsu.model.BeanDefinition;
 
@@ -22,17 +23,30 @@ public class BeanControllingService {
 
     @SuppressWarnings("all")
     public <T> T getBeanByName(String name) {
+        MDC.put("beanName", name);
+        log.info("Attempting to get bean by name");
         BeanDefinition definition = dependencyContainer.getBeanDefinitions().get(name);
         if (definition == null) {
+            MDC.put("beanName", name);
+            log.error("No bean found with this name");
+            MDC.remove("beanName");
             throw new WrongJsonException(" no bean : " + name);
         }
-        return switch (definition.getScope()) {
+        T result = switch (definition.getScope()) {
             case "singleton" -> (T) dependencyContainer.getSingletonInstances().get(name);
             case "prototype" -> (T) createBeanInstance(definition);
             case "thread" -> dependencyContainer.getThreadLocalBean(name);
-            default ->
-                    throw new WrongJsonException(" no such bean scope: " + definition.getScope());
+            default -> {
+                MDC.put("beanName", name);
+                log.info("No such bean scope: " + definition.getScope());
+                MDC.remove("beanName");
+                throw new WrongJsonException(" no such bean scope: " + definition.getScope());
+            }
         };
+        MDC.put("beanName", name);
+        log.info("Successfully retrieved bean");
+        MDC.remove("beanName");
+        return result;
     }
 
     public void instantiateAndRegisterBeans() {
@@ -57,8 +71,8 @@ public class BeanControllingService {
         beans.values().forEach(beanDefinition -> {
             if (!dependencyContainer.containsBean(beanDefinition.getName())) {
                 Object beanInstance = createBeanInstance(beanDefinition);
-                if (scope.equals("thread")){
-                    dependencyContainer.registerThreadBeanInstance(beanDefinition,  ()->createBeanInstance(beanDefinition));
+                if (scope.equals("thread")) {
+                    dependencyContainer.registerThreadBeanInstance(beanDefinition, () -> createBeanInstance(beanDefinition));
                 } else if (scope.equals("singleton")) {
                     dependencyContainer.registerSingletonBeanInstance(beanDefinition, beanInstance);
                 }
@@ -67,6 +81,9 @@ public class BeanControllingService {
     }
 
     public Object createBeanInstance(BeanDefinition beanDefinition) {
+        MDC.put("beanName", beanDefinition.getClassName());
+        log.info("Creating bean instance");
+        MDC.remove("beanName");
         try {
             Class<?> beanClass = Class.forName(beanDefinition.getClassName());
             Constructor<?> constructor = findSuitableConstructor(beanClass, beanDefinition.getConstructorParams());
@@ -78,8 +95,14 @@ public class BeanControllingService {
             }
             Object instance = constructor.newInstance(params);
             applyInitParams(instance, beanDefinition.getInitParams());
+            MDC.put("beanName", beanDefinition.getClassName());
+            log.info("Successfully created bean instance");
+            MDC.remove("beanName");
             return instance;
         } catch (Exception e) {
+            MDC.put("beanName", beanDefinition.getClassName());
+            log.error("Failed to create bean instance");
+            MDC.remove("beanName");
             throw new ConstructorException(beanDefinition.getClassName());
         }
     }
@@ -89,6 +112,9 @@ public class BeanControllingService {
             try {
                 return beanClass.getDeclaredConstructor();
             } catch (NoSuchMethodException e) {
+                MDC.put("beanName", beanClass.getName());
+                log.error("No default constructor found");
+                MDC.remove("beanName");
                 throw new RuntimeException("No default constructor found for " + beanClass.getName(), e);
             }
         }
@@ -101,12 +127,15 @@ public class BeanControllingService {
             for (int i = 0; i < paramTypes.length; i++) {
                 BeanDefinition paramDefinition = dependencyContainer.getBeanDefinitionByName((String) constructorParams.get(i));
                 if (paramDefinition == null) {
-                    throw new EmptyJsonException(beanClass.getName(),"bean name");
-                } else if (!paramTypes[i].isAssignableFrom(getClassForName(paramDefinition.getClassName()))){
-                    throw new ConstructorClassMismatchException(beanClass.getName(),paramTypes[i].toString(), paramDefinition.getClassName());
+                    MDC.put("beanName", beanClass.getName());
+                    log.error("Json reading error with field 'bean name'");
+                    MDC.remove("beanName");
+                    throw new EmptyJsonException(beanClass.getName(), "bean name");
+                } else if (!paramTypes[i].isAssignableFrom(getClassForName(paramDefinition.getClassName()))) {
+                    throw new ConstructorClassMismatchException(beanClass.getName(), paramTypes[i].toString(), paramDefinition.getClassName());
                 }
             }
-                return constructor;
+            return constructor;
         }
         throw new ConstructorException(beanClass.getName());
     }
@@ -122,8 +151,8 @@ public class BeanControllingService {
                     throw new NoDependencyException(beanName);
                 }
                 paramInstance = createBeanInstance(beanDefinition);
-                if (beanDefinition.getScope().equals("thread")){
-                    dependencyContainer.registerThreadBeanInstance(beanDefinition, ()->createBeanInstance(beanDefinition));
+                if (beanDefinition.getScope().equals("thread")) {
+                    dependencyContainer.registerThreadBeanInstance(beanDefinition, () -> createBeanInstance(beanDefinition));
                 } else if (beanDefinition.getScope().equals("singleton")) {
                     dependencyContainer.registerSingletonBeanInstance(beanDefinition, paramInstance);
                 }
@@ -134,11 +163,13 @@ public class BeanControllingService {
     }
 
 
-
     private Class<?> getClassForName(String className) {
         try {
             return Class.forName(className);
         } catch (ClassNotFoundException e) {
+            MDC.put("beanName", className);
+            log.error("Class not found '" + className + "'");
+            MDC.remove("beanName");
             throw new RuntimeException("Class not found: " + className, e);
         }
     }
@@ -165,6 +196,9 @@ public class BeanControllingService {
                 return method;
             }
         }
+        MDC.put("beanName", clazz.getName());
+        log.error("No such method: " + methodName);
+        MDC.remove("beanName");
         throw new NoSuchMethodException(clazz.getName() + "." + methodName + "(...)");
     }
 }
