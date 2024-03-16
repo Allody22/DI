@@ -1,6 +1,8 @@
 package ru.nsu.services;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import ru.nsu.exception.NoDependencyException;
 import ru.nsu.exception.WrongJsonException;
 import ru.nsu.model.BeanDefinition;
@@ -11,6 +13,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Data
+@Slf4j
 public class ScanningConfig {
 
     private final Map<String, BeanDefinition> singletonBeans = new HashMap<>();
@@ -31,8 +34,12 @@ public class ScanningConfig {
                 case "thread":
                     getThreadBeans().put(beanDefinition.getClassName(), definition);
                     break;
-                default:
+                default: {
+                    MDC.put("beanName", beanDefinition.getClassName());
+                    log.info("No such bean scope: " + definition.getScope());
+                    MDC.remove("beanName");
                     throw new WrongJsonException(" no such bean scope: " + definition.getScope());
+                }
             }
         }
     }

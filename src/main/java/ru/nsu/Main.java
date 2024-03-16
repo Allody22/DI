@@ -18,13 +18,16 @@ public class Main {
         //Сканируем информацию
         ScanningConfig scanningConfig = new ScanningConfig();
         scanningConfig.startBeanScanning(beanDefinitions);
-        System.out.println("scanning config = " + scanningConfig);
-
+//        System.out.println("scanning config = " + scanningConfig);
         DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
         BeanControllingService instantiationService = new BeanControllingService(dependencyContainer);
 
         // Инстанцируем и регистрируем бины
         instantiationService.instantiateAndRegisterBeans();
-        System.out.println("Dependency Container = " + instantiationService.getDependencyContainer().getSingletonInstances());
+//        var logs = dependencyContainer.getLogsForBean("ru.nsu.test.easy.MyService");
+
+//        var logs = dependencyContainer.getLogsForBean("ru.nsu.test.easy.MyService", "logs/beans_actions.log");
+        log.info("END OF THE SESSION");
+//        System.out.println("logs = " + logs);
     }
 }
