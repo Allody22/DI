@@ -13,6 +13,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class EasyDataTest {
 
+  /**
+   * Тест. Бины с областью видимости "singleton" всегда возвращают один и тот же экземпляр.
+   */
     @Test
     public void testSingletonBean() throws IOException {
         BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
@@ -32,6 +35,9 @@ public class EasyDataTest {
         assertSame(firstInstance, secondInstance, "Это синглетон бины и они должны быть всегда одинаковые");
     }
 
+  /**
+   * Тест. Бины с областью видимости "prototype" возвращают разные экземпляры при каждом запросе.
+   */
     @Test
     public void testPrototypeBean() throws IOException {
         BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
@@ -56,6 +62,9 @@ public class EasyDataTest {
         );
     }
 
+  /**
+   * Тестирует корректность установки свойств бинов через сеттеры на основе данных из конфигурации.
+   */
     @Test
     public void testSetters() throws IOException {
         BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
