@@ -1,7 +1,7 @@
 {
   "beans": [
     {
-      "class": "ru.nsu.easy.MyService",
+      "class": "ru.nsu.test.easy.MyService",
       "name": "myService",
       "scope": "singleton",
       "initParams": {
@@ -9,11 +9,11 @@
         "setAnotherProperty": 5
       },
       "constructorParams": [
-        "ru.nsu.easy.MyRepository"
+        "ru.nsu.test.easy.MyRepository"
       ]
     },
     {
-      "class": "ru.nsu.easy.MyRepository",
+      "class": "ru.nsu.test.easy.MyRepository",
       "name": "myRepositoryImpl",
       "scope": "prototype",
       "initParams": {

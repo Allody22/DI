@@ -1,6 +1,8 @@
 package ru.nsu.services;
 
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import ru.nsu.exception.NoDependencyException;
 import ru.nsu.exception.WrongJsonException;
 import ru.nsu.model.BeanDefinition;
@@ -15,6 +17,7 @@ import java.util.Map;
  * прототипы и бины на уровне потока. Каждый тип бина хранится в отдельной мапе для быстрого доступа.
  */
 @Data
+@Slf4j
 public class ScanningConfig {
 
   private final Map<String, BeanDefinition> singletonBeans = new HashMap<>();
@@ -22,7 +25,8 @@ public class ScanningConfig {
   private final Map<String, BeanDefinition> threadBeans = new HashMap<>();
 
 
-  /**
+  
+/**
    * Сканирует определения бинов из предоставленного объекта {@code BeanDefinitionsWrapper} и классифицирует их
    * в соответствии с их областью видимости (singleton, prototype, thread).
    *
@@ -30,14 +34,26 @@ public class ScanningConfig {
    * @throws WrongJsonException если область видимости бина не распознана
    */
   public void startBeanScanning(BeanDefinitionsWrapper beanDefinitions) {
-    for (BeanDefinitionReader beanDefinition : beanDefinitions.getBeans()) {
-      BeanDefinition definition = convertToBeanDefinition(beanDefinition);
-      switch (beanDefinition.getScope().toLowerCase()) {
-        case "singleton" -> getSingletonBeans().put(beanDefinition.getClassName(), definition);
-        case "prototype" -> getPrototypeBeans().put(beanDefinition.getClassName(), definition);
-        case "thread" -> getThreadBeans().put(beanDefinition.getClassName(), definition);
-        default -> throw new WrongJsonException(" no such bean scope: " + definition.getScope());
-      }
+        for (BeanDefinitionReader beanDefinition : beanDefinitions.getBeans()) {
+            BeanDefinition definition = convertToBeanDefinition(beanDefinition);
+            switch (beanDefinition.getScope().toLowerCase()) {
+                case "singleton":
+                    getSingletonBeans().put(beanDefinition.getClassName(), definition);
+                    break;
+                case "prototype":
+                    getPrototypeBeans().put(beanDefinition.getClassName(), definition);
+                    break;
+                case "thread":
+                    getThreadBeans().put(beanDefinition.getClassName(), definition);
+                    break;
+                default: {
+                    MDC.put("beanName", beanDefinition.getClassName());
+                    log.info("No such bean scope: " + definition.getScope());
+                    MDC.remove("beanName");
+                    throw new WrongJsonException(" no such bean scope: " + definition.getScope());
+                }
+            }
+        }
     }
   }
 

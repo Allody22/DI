@@ -1,6 +1,6 @@
 import org.junit.jupiter.api.Test;
-import ru.nsu.easy.MyRepository;
-import ru.nsu.easy.MyService;
+import ru.nsu.test.easy.MyRepository;
+import ru.nsu.test.easy.MyService;
 import ru.nsu.model.BeanDefinitionsWrapper;
 import ru.nsu.services.DependencyContainerImp;
 import ru.nsu.services.JsonBeanDefinitionReader;
@@ -16,74 +16,73 @@ public class EasyDataTest {
   /**
    * Тест. Бины с областью видимости "singleton" всегда возвращают один и тот же экземпляр.
    */
-  @Test
-  public void testSingletonBean() throws IOException {
-    BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
+    @Test
+    public void testSingletonBean() throws IOException {
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
 
-    //Сканируем информацию
-    ScanningConfig scanningConfig = new ScanningConfig();
-    scanningConfig.startBeanScanning(beanDefinitions);
+        //Сканируем информацию
+        ScanningConfig scanningConfig = new ScanningConfig();
+        scanningConfig.startBeanScanning(beanDefinitions);
 
-    DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
-    BeanControllingService instantiationService =
-        new BeanControllingService(dependencyContainer);
-    instantiationService.instantiateAndRegisterBeans();
+        DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
+        BeanControllingService instantiationService =
+                new BeanControllingService(dependencyContainer);
+        instantiationService.instantiateAndRegisterBeans();
 
-    MyService firstInstance = instantiationService.getBeanByName("ru.nsu.easy.MyService");
-    MyService secondInstance = instantiationService.getBeanByName("ru.nsu.easy.MyService");
+        MyService firstInstance = instantiationService.getBeanByName("ru.nsu.test.easy.MyService");
+        MyService secondInstance = instantiationService.getBeanByName("ru.nsu.test.easy.MyService");
 
-    assertSame(firstInstance, secondInstance, "Это синглетон бины и они должны быть всегда одинаковые");
-  }
+        assertSame(firstInstance, secondInstance, "Это синглетон бины и они должны быть всегда одинаковые");
+    }
 
   /**
    * Тест. Бины с областью видимости "prototype" возвращают разные экземпляры при каждом запросе.
    */
-  @Test
-  public void testPrototypeBean() throws IOException {
-    BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
+    @Test
+    public void testPrototypeBean() throws IOException {
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
 
-    ScanningConfig scanningConfig = new ScanningConfig();
-    scanningConfig.startBeanScanning(beanDefinitions);
+        ScanningConfig scanningConfig = new ScanningConfig();
+        scanningConfig.startBeanScanning(beanDefinitions);
 
-    DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
-    BeanControllingService instantiationService =
-        new BeanControllingService(dependencyContainer);
-    instantiationService.instantiateAndRegisterBeans();
+        DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
+        BeanControllingService instantiationService =
+                new BeanControllingService(dependencyContainer);
+        instantiationService.instantiateAndRegisterBeans();
 
-    MyService serviceBean = instantiationService.getBeanByName("ru.nsu.easy.MyService");
-    MyRepository firstMyRepository = instantiationService.getBeanByName("ru.nsu.easy.MyRepository");
-    MyRepository secondMyRepository = instantiationService.getBeanByName("ru.nsu.easy.MyRepository");
-    MyRepository thirdMyRepository = serviceBean.getMyRepository();
+        MyService serviceBean = instantiationService.getBeanByName("ru.nsu.test.easy.MyService");
+        MyRepository firstMyRepository = instantiationService.getBeanByName("ru.nsu.test.easy.MyRepository");
+        MyRepository secondMyRepository = instantiationService.getBeanByName("ru.nsu.test.easy.MyRepository");
+        MyRepository thirdMyRepository = serviceBean.getMyRepository();
 
-    assertAll("Прототайпы бинов не должны быть одинаковые",
-        () -> assertNotSame(firstMyRepository, secondMyRepository),
-        () -> assertNotSame(firstMyRepository, thirdMyRepository),
-        () -> assertNotSame(secondMyRepository, thirdMyRepository)
-    );
-  }
+        assertAll("Прототайпы бинов не должны быть одинаковые",
+                () -> assertNotSame(firstMyRepository, secondMyRepository),
+                () -> assertNotSame(firstMyRepository, thirdMyRepository),
+                () -> assertNotSame(secondMyRepository, thirdMyRepository)
+        );
+    }
 
   /**
    * Тестирует корректность установки свойств бинов через сеттеры на основе данных из конфигурации.
    */
+    @Test
+    public void testSetters() throws IOException {
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
 
-  @Test
-  public void testSetters() throws IOException {
-    BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beans.json");
+        //Сканируем информацию
+        ScanningConfig scanningConfig = new ScanningConfig();
+        scanningConfig.startBeanScanning(beanDefinitions);
 
-    //Сканируем информацию
-    ScanningConfig scanningConfig = new ScanningConfig();
-    scanningConfig.startBeanScanning(beanDefinitions);
+        DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
+        BeanControllingService instantiationService =
+                new BeanControllingService(dependencyContainer);
+        instantiationService.instantiateAndRegisterBeans();
 
-    DependencyContainerImp dependencyContainer = new DependencyContainerImp(scanningConfig);
-    BeanControllingService instantiationService =
-        new BeanControllingService(dependencyContainer);
-    instantiationService.instantiateAndRegisterBeans();
+        MyService myService = instantiationService.getBeanByName("ru.nsu.test.easy.MyService");
+        MyRepository myRepository = instantiationService.getBeanByName("ru.nsu.test.easy.MyRepository");
 
-    MyService myService = instantiationService.getBeanByName("ru.nsu.easy.MyService");
-    MyRepository myRepository = instantiationService.getBeanByName("ru.nsu.easy.MyRepository");
-
-    assertEquals(myService.getSomeProperty(), "value1", "В значение someProperty в MyService из конфигурации установлена строка 'value1'");
-    assertSame(myService.getAnotherProperty(), 5, "В значение anotherProperty в MyService из конфигурации установлено число 5");
-    assertEquals(myRepository.getDataSource(), "myDataSource", "В значение myDataSource в MyRepository из конфигурации установлена строка 'myDataSource'");
-  }
+        assertEquals(myService.getSomeProperty(), "value1", "В значение someProperty в MyService из конфигурации установлена строка 'value1'");
+        assertSame(myService.getAnotherProperty(), 5, "В значение anotherProperty в MyService из конфигурации установлено число 5");
+        assertEquals(myRepository.getDataSource(), "myDataSource", "В значение myDataSource в MyRepository из конфигурации установлена строка 'myDataSource'");
+    }
 }

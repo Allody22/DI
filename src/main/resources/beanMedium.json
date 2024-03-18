@@ -1,30 +1,30 @@
 {
   "beans": [
     {
-      "class": "ru.nsu.hard.MySingletonService",
+      "class": "ru.nsu.test.medium.MySingletonService",
       "name": "mySingletonService",
       "scope": "singleton",
       "initParams": {
         "setSomeSingletonProperty": "singletonValue"
       },
       "constructorParams": [
-        "ru.nsu.hard.MyPrototypeRepository",
-        "ru.nsu.hard.MySingletonRepository"
+        "ru.nsu.test.medium.MyPrototypeRepository",
+        "ru.nsu.test.medium.MySingletonRepository"
       ]
     },
     {
-      "class": "ru.nsu.hard.MyPrototypeService",
+      "class": "ru.nsu.test.medium.MyPrototypeService",
       "name": "myPrototypeService",
       "scope": "prototype",
       "initParams": {
         "setSomePrototypeProperty": "prototypeValue"
       },
       "constructorParams": [
-        "ru.nsu.hard.MyPrototypeRepository"
+        "ru.nsu.test.medium.MyPrototypeRepository"
       ]
     },
     {
-      "class": "ru.nsu.hard.MySingletonRepository",
+      "class": "ru.nsu.test.medium.MySingletonRepository",
       "name": "mySingletonRepository",
       "scope": "singleton",
       "initParams": {
@@ -32,7 +32,7 @@
       }
     },
     {
-      "class": "ru.nsu.hard.MyPrototypeRepository",
+      "class": "ru.nsu.test.medium.MyPrototypeRepository",
       "name": "myPrototypeRepository",
       "scope": "prototype",
       "initParams": {

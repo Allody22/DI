@@ -1,9 +1,9 @@
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
-import ru.nsu.hard.MyPrototypeRepository;
-import ru.nsu.hard.MyPrototypeService;
-import ru.nsu.hard.MySingletonRepository;
-import ru.nsu.hard.MySingletonService;
+import ru.nsu.test.medium.MyPrototypeRepository;
+import ru.nsu.test.medium.MyPrototypeService;
+import ru.nsu.test.medium.MySingletonRepository;
+import ru.nsu.test.medium.MySingletonService;
 import ru.nsu.model.BeanDefinitionsWrapper;
 import ru.nsu.services.DependencyContainerImp;
 import ru.nsu.services.JsonBeanDefinitionReader;
@@ -15,11 +15,11 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
-public class LifeCyclesEasyDataTest {
+public class MediumDataTest {
 
     @Test
     public void testPrototypeBean() throws IOException {
-        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beanHard.json");
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beanMedium.json");
 
         //Сканируем информацию
         ScanningConfig scanningConfig = new ScanningConfig();
@@ -31,13 +31,13 @@ public class LifeCyclesEasyDataTest {
                 new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
-        MyPrototypeService firstPrototypeService = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeService");
-        MyPrototypeService secondPrototypeService = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeService");
+        MyPrototypeService firstPrototypeService = instantiationService.getBeanByName("ru.nsu.test.medium.MyPrototypeService");
+        MyPrototypeService secondPrototypeService = instantiationService.getBeanByName("ru.nsu.test.medium.MyPrototypeService");
 
         assertNotSame(firstPrototypeService, secondPrototypeService, "Прототайпы сервисы не должны быть одинаковые");
 
-        MyPrototypeRepository firstPrototypeRepository = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
-        MyPrototypeRepository secondPrototypeRepository = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
+        MyPrototypeRepository firstPrototypeRepository = instantiationService.getBeanByName("ru.nsu.test.medium.MyPrototypeRepository");
+        MyPrototypeRepository secondPrototypeRepository = instantiationService.getBeanByName("ru.nsu.test.medium.MyPrototypeRepository");
         MyPrototypeRepository thirdPrototypeRepository = firstPrototypeService.getMyPrototypeRepository();
         MyPrototypeRepository fourthPrototypeRepository = secondPrototypeService.getMyPrototypeRepository();
 
@@ -57,7 +57,7 @@ public class LifeCyclesEasyDataTest {
 
     @Test
     public void testSingletonBean() throws IOException {
-        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beanHard.json");
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beanMedium.json");
 
         //Сканируем информацию
         ScanningConfig scanningConfig = new ScanningConfig();
@@ -69,20 +69,20 @@ public class LifeCyclesEasyDataTest {
                 new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
-        MySingletonService firstSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
-        MySingletonService secondSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
+        MySingletonService firstSingletonService = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonService");
+        MySingletonService secondSingletonService = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonService");
 
         assertSame(firstSingletonService, secondSingletonService, "Синглетон сервисы должны быть одинаковые");
 
-        MySingletonRepository firstSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
-        MySingletonRepository secondSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
+        MySingletonRepository firstSingletonRepository = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonRepository");
+        MySingletonRepository secondSingletonRepository = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonRepository");
 
         assertSame(firstSingletonRepository, secondSingletonRepository, "Синглетон сервисы должны быть одинаковые");
     }
 
     @Test
     public void testSetters() throws IOException {
-        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beanHard.json");
+        BeanDefinitionsWrapper beanDefinitions = new JsonBeanDefinitionReader().readBeanDefinitions("beanMedium.json");
 
         //Сканируем информацию
         ScanningConfig scanningConfig = new ScanningConfig();
@@ -94,8 +94,8 @@ public class LifeCyclesEasyDataTest {
                 new BeanControllingService(dependencyContainer);
         instantiationService.instantiateAndRegisterBeans();
 
-        MySingletonService firstSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
-        MySingletonService secondSingletonService = instantiationService.getBeanByName("ru.nsu.hard.MySingletonService");
+        MySingletonService firstSingletonService = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonService");
+        MySingletonService secondSingletonService = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonService");
 
         assertAll(
                 () -> assertEquals(firstSingletonService.getSomeSingletonProperty(), secondSingletonService.getSomeSingletonProperty(), "Значение someSingletonProperty в MySingletonService должно быть 'singletonValue'"),
@@ -104,8 +104,8 @@ public class LifeCyclesEasyDataTest {
         );
 
 
-        MySingletonRepository firstSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
-        MySingletonRepository secondSingletonRepository = instantiationService.getBeanByName("ru.nsu.hard.MySingletonRepository");
+        MySingletonRepository firstSingletonRepository = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonRepository");
+        MySingletonRepository secondSingletonRepository = instantiationService.getBeanByName("ru.nsu.test.medium.MySingletonRepository");
 
         assertAll(
                 () -> assertEquals(firstSingletonRepository.getDataSource(), secondSingletonRepository.getDataSource(), "Значение dataSource в MySingletonRepository должно быть 'singletonDataSource'"),
@@ -113,10 +113,10 @@ public class LifeCyclesEasyDataTest {
                 () -> assertEquals(secondSingletonRepository.getDataSource(), "singletonDataSource", "Значение dataSource в MySingletonRepository должно быть 'singletonDataSource'")
         );
 
-        MyPrototypeService myPrototypeService = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeService");
+        MyPrototypeService myPrototypeService = instantiationService.getBeanByName("ru.nsu.test.medium.MyPrototypeService");
         assertEquals(myPrototypeService.getSomePrototypeProperty(), "prototypeValue", "Значение somePrototypeValue в MyPrototypeService должно быть 'prototypeValue'");
 
-        MyPrototypeRepository myPrototypeRepository = instantiationService.getBeanByName("ru.nsu.hard.MyPrototypeRepository");
+        MyPrototypeRepository myPrototypeRepository = instantiationService.getBeanByName("ru.nsu.test.medium.MyPrototypeRepository");
         assertEquals(myPrototypeRepository.getDataSource(), "prototypeDataSource", "Значение dataSource в MyPrototypeRepository должно быть 'prototypeDataSource'");
 
     }
