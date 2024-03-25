@@ -19,20 +19,29 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+/**
+ * Тут мы храним бины и достаём мы её тоже из этого класса.
+ */
 @Data
 @NoArgsConstructor
 @Slf4j
-public class DependencyContainerImp {
+public class BeanContainer {
+
     private Map<String, BeanDefinition> beanDefinitions = new HashMap<>();
+
     private Map<String, Object> singletonInstances = new HashMap<>();
+
     private Map<String, ThreadLocal<Object>> threadInstances = new HashMap<>();
 
-    private ScanningConfig scanningConfig;
+    private Map<String, Object> customBean = new HashMap<>();
 
-    public DependencyContainerImp(ScanningConfig scanningConfig) {
-        this.scanningConfig = scanningConfig;
+    private DependencyScanningConfig dependencyScanningConfig;
+
+
+    public BeanContainer(DependencyScanningConfig dependencyScanningConfig){
+        this.dependencyScanningConfig = dependencyScanningConfig;
+        this.beanDefinitions = dependencyScanningConfig.getNameToBeanDefitionMap();
     }
-
 
     @SuppressWarnings("all")
     public <T> T getThreadLocalBean(String name) {
@@ -47,44 +56,26 @@ public class DependencyContainerImp {
         return singletonInstances.containsKey(beanName) || threadInstances.containsKey(beanName);
     }
 
-    public void registerBeanDefinition(String name, BeanDefinition beanDefinition) {
-        MDC.put("beanName", beanDefinition.getClassName());
-        log.info("Registering bean definition");
-        MDC.remove("beanName");
-        beanDefinitions.put(name, beanDefinition);
-    }
-
     public void registerSingletonBeanInstance(@NonNull BeanDefinition beanDefinition, Object beanInstance) {
-        MDC.put("beanName", beanDefinition.getClassName());
+        MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
         log.info("Registering singleton bean instance for class");
         MDC.remove("beanName");
-        singletonInstances.put(beanDefinition.getClassName(), beanInstance);
+        singletonInstances.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), beanInstance);
     }
 
     public void registerThreadBeanInstance(@NonNull BeanDefinition beanDefinition, Supplier<?> beanSupplier) {
-        MDC.put("beanName", beanDefinition.getClassName());
+        MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
         log.info("Registering thread-local bean instance");
         MDC.remove("beanName");
-        threadInstances.put(beanDefinition.getClassName(), ThreadLocal.withInitial(beanSupplier));
+        threadInstances.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), ThreadLocal.withInitial(beanSupplier));
     }
 
-    public BeanDefinition getBeanDefinitionByName(String name) {
-        return beanDefinitions.get(name);
+    public void registerCustomBeanBeanInstance(@NonNull BeanDefinition beanDefinition, Object beanInstance) {
+        MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
+        log.info("Registering singleton bean instance for class");
+        MDC.remove("beanName");
+        customBean.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), beanInstance);
     }
-
-    public List<String> getLogsForBeanInASpecialFile(String beanClassName, String logFilePath) throws IOException {
-        List<String> logsForBean = new ArrayList<>();
-        try (Stream<String> stream = Files.newBufferedReader(Paths.get(logFilePath), StandardCharsets.UTF_8).lines()) {
-            stream.forEach(line -> {
-                // Теперь фильтрация идёт по части сообщения, содержащей имя класса
-                if (line.contains(beanClassName)) {
-                    logsForBean.add(line);
-                }
-            });
-        }
-        return logsForBean;
-    }
-
 
     public List<String> getLogsForBean(String beanClassName) throws IOException {
         String logDirPath = "logs";
@@ -98,12 +89,13 @@ public class DependencyContainerImp {
                         }
                     });
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    MDC.put("beanName", ("all beans"));
+                    log.error("Can't find directory with logs");
+                    MDC.remove("beanName");
                 }
             });
         }
         return logsForBean;
     }
-
 }
 
