@@ -20,7 +20,7 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
- * Тут мы храним бины и достаём мы её тоже из этого класса.
+ * В этом классе мы храним все модели и инстансы бинов.
  */
 @Data
 @NoArgsConstructor
@@ -38,11 +38,29 @@ public class BeanContainer {
     private DependencyScanningConfig dependencyScanningConfig;
 
 
+    /**
+     * Конструктор контейнера бинов, записывающий сюда всю просканированную информацию.
+     *
+     * @param dependencyScanningConfig конфиг сканирования.
+     */
     public BeanContainer(DependencyScanningConfig dependencyScanningConfig){
         this.dependencyScanningConfig = dependencyScanningConfig;
-        this.beanDefinitions = dependencyScanningConfig.getNameToBeanDefitionMap();
+        this.beanDefinitions = dependencyScanningConfig.getNameToBeanDefinitionMap();
     }
 
+    /**
+     * Получает экземпляр бина, связанного с текущим потоком, по его имени.
+     * Этот метод предназначен для использования с бинами, имеющими область видимости "thread",
+     * что означает, что каждый поток имеет свою собственную уникальную инстанцию бина.
+     * Если бин с указанным именем не найден или не является бином типа "thread",
+     * метод возвращает {@code null}.
+     *
+     * @param name имя бина, инстанс которого необходимо получить. Не должно быть {@code null}.
+     * @param <T> ожидаемый тип возвращаемого бина. Предостережение: тип не проверяется при выполнении,
+     *            поэтому неправильное использование может привести к {@code ClassCastException}.
+     * @return инстанс бина типа "thread" для текущего потока или {@code null}, если такой бин не найден
+     *         или имя {@code name} не соответствует бину типа "thread".
+     */
     @SuppressWarnings("all")
     public <T> T getThreadLocalBean(String name) {
         ThreadLocal<?> threadLocal = threadInstances.get(name);
@@ -52,10 +70,23 @@ public class BeanContainer {
         return null;
     }
 
+    /**
+     * Проверяем, есть ли уже созданный экземпляр синглетон или потокового бина,
+     * потому что у нас нет необходимости создать их еще раз.
+     *
+     * @param beanName имя бина.
+     * @return true если такой бин есть, иначе false.
+     */
     public boolean containsBean(String beanName) {
         return singletonInstances.containsKey(beanName) || threadInstances.containsKey(beanName);
     }
 
+    /**
+     * Регистрируем инстанс синглетон бина и сохраняем его в контейнер.
+     *
+     * @param beanDefinition модель бина, чтобы получить его известное имя.
+     * @param beanInstance инстанс бина.
+     */
     public void registerSingletonBeanInstance(@NonNull BeanDefinition beanDefinition, Object beanInstance) {
         MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
         log.info("Registering singleton bean instance for class");
@@ -63,6 +94,12 @@ public class BeanContainer {
         singletonInstances.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), beanInstance);
     }
 
+    /**
+     * Регистрируем инстанс потокового бина и сохраняем его в контейнер.
+     *
+     * @param beanDefinition модель бина, чтобы получить его известное имя.
+     * @param beanSupplier инстанс потокового бина, обёрнутый в Supplier, чтобы он сохранился в определённый поток.
+     */
     public void registerThreadBeanInstance(@NonNull BeanDefinition beanDefinition, Supplier<?> beanSupplier) {
         MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
         log.info("Registering thread-local bean instance");
@@ -70,6 +107,12 @@ public class BeanContainer {
         threadInstances.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), ThreadLocal.withInitial(beanSupplier));
     }
 
+    /**
+     * Регистрируем модель собственного бина и сохраняем его в контейнер.
+     *
+     * @param beanDefinition модель бина.
+     * @param beanInstance инстанс бина.
+     */
     public void registerCustomBeanBeanInstance(@NonNull BeanDefinition beanDefinition, Object beanInstance) {
         MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
         log.info("Registering singleton bean instance for class");
@@ -77,6 +120,13 @@ public class BeanContainer {
         customBean.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), beanInstance);
     }
 
+    /**
+     * Функция для получения логов бина по его имени из специального файла.
+     *
+     * @param beanClassName имя бина, для которого мы будем искать логи.
+     * @return набор json логов.
+     * @throws IOException ошибка, на случай если файл с логами не был найден.
+     */
     public List<String> getLogsForBean(String beanClassName) throws IOException {
         String logDirPath = "logs";
         List<String> logsForBean = new ArrayList<>();
