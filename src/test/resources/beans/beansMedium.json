@@ -1,0 +1,32 @@
+{
+  "beans": [
+    {
+      "name": "mySingletonService",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeSingletonProperty": "singletonValue"
+      }
+    },
+    {
+      "name": "myPrototypeService",
+      "scope": "prototype",
+      "initParams": {
+        "setSomePrototypeProperty": "prototypeValue"
+      }
+    },
+    {
+      "name": "mySingletonRepository",
+      "scope": "singleton",
+      "initParams": {
+        "setDataSource": "singletonDataSource"
+      }
+    },
+    {
+      "name": "myPrototypeRepository",
+      "scope": "prototype",
+      "initParams": {
+        "setDataSource": "prototypeDataSource"
+      }
+    }
+  ]
+}

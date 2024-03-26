@@ -1,0 +1,16 @@
+{
+  "beans": [
+    {
+      "name": "EmailService",
+      "scope": "singleton"
+    },
+    {
+      "name": "NotificationManager",
+      "scope": "singleton"
+    },
+    {
+      "name": "SmsService",
+      "scope": "singleton"
+    }
+  ]
+}

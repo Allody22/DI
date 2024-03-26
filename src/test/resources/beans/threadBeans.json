@@ -1,0 +1,42 @@
+{
+  "beans": [
+    {
+      "name": "mySingletonService",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeSingletonProperty": "singletonValue",
+        "setSomeIntValue" : 1
+      }
+    },
+    {
+      "name": "myPrototypeService",
+      "scope": "prototype",
+      "initParams": {
+        "setSomePrototypeProperty": "prototypeValue"
+      }
+    },
+    {
+      "name": "mySingletonRepository",
+      "scope": "singleton",
+      "initParams": {
+        "setDataSource": "singletonDataSource",
+        "setAnotherStringValue": "anotherStringValue"
+      }
+    },
+    {
+      "name": "myPrototypeRepository",
+      "scope": "prototype",
+      "initParams": {
+        "setDataSource": "prototypeDataSource"
+      }
+    },
+    {
+      "name": "myThreadScopeRepository",
+      "scope": "thread",
+      "initParams": {
+        "setThreadLocalData": "threadSpecificData",
+        "setIntegerThreadData": 1234321123
+      }
+    }
+  ]
+}

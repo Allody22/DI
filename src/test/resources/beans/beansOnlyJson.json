@@ -1,0 +1,24 @@
+{
+  "beans": [
+    {
+      "class": "model.json.MyService",
+      "name": "myService",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeProperty": "value1",
+        "setAnotherProperty": 5
+      },
+      "constructorParams": [
+        "Provider<model.json.MyRepository>"
+      ]
+    },
+    {
+      "class": "model.json.MyRepository",
+      "name": "myRepositoryImpl",
+      "scope": "prototype",
+      "initParams": {
+        "setDataSource": "myDataSource"
+      }
+    }
+  ]
+}

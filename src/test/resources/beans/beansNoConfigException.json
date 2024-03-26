@@ -1,0 +1,12 @@
+{
+  "beans": [
+    {
+      "name": "myServiceImplementation",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeProperty": "value1",
+        "setAnotherProperty": 5
+      }
+    }
+  ]
+}

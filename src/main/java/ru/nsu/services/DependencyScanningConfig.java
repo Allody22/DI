@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.scanners.TypeAnnotationsScanner;
-import ru.nsu.exception.ClazzExceptionException;
+import ru.nsu.exception.ClazzException;
 import ru.nsu.exception.ConstructorException;
 import ru.nsu.exception.EmptyJsonException;
 import ru.nsu.exception.WrongJsonException;
@@ -69,7 +69,7 @@ public class DependencyScanningConfig {
             if (!clazz.isInterface() && isAvailableForInjection(clazz)) {
                 String namedAnnotationValue = Optional.ofNullable(clazz.getAnnotation(Named.class))
                         .map(Named::value)
-                        .orElseThrow(() -> new ClazzExceptionException(clazz.getCanonicalName()));
+                        .orElseThrow(() -> new ClazzException(clazz.getCanonicalName()));
 
                 BeanDefinitionReader beanDefinitionReader = Optional.ofNullable(findBeanInJson(namedAnnotationValue))
                         .orElseThrow(() -> new WrongJsonException(namedAnnotationValue, ". No configuration for bean with name."));

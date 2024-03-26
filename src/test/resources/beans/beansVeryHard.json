@@ -1,0 +1,53 @@
+{
+  "beans": [
+    {
+      "name": "myAppConfig",
+      "scope": "singleton"
+    },
+    {
+      "name": "userManagementService",
+      "scope": "singleton"
+    },
+    {
+      "name": "notificationService",
+      "scope": "singleton"
+    },
+    {
+      "name": "userDataRepository",
+      "scope": "singleton",
+      "initParams": {
+        "setDataSource": "DataSourceBean"
+      }
+    },
+    {
+      "name": "emailService",
+      "scope": "prototype",
+      "initParams": {
+        "setConfig": "mailConfig"
+      }
+    },
+    {
+      "name": "threadLocalContext",
+      "scope": "thread"
+    },
+    {
+      "name": "DataSourceBean",
+      "scope": "singleton",
+      "initParams": {
+        "setUrl": "jdbc:exampleDbUrl",
+        "setUser": "dbUser",
+        "setPassword": "dbPassword"
+      }
+    },
+    {
+      "name": "mailConfig",
+      "scope": "singleton",
+      "initParams": {
+        "setHost": "smtp.example.com",
+        "setPort": "587",
+        "setUsername": "noreply@example.com",
+        "setPassword": "password"
+      }
+    }
+  ]
+}
