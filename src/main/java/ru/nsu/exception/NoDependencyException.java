@@ -15,6 +15,11 @@ public class NoDependencyException extends RuntimeException {
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Конструктор для выброса этой ошибки.
+     *
+     * @param name имя бина, который связан с ошибкой.
+     */
     public NoDependencyException(String name) {
         super("No dependency with name '" + name + "'");
         MDC.put("beanName", name);

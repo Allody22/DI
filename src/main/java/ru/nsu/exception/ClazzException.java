@@ -20,13 +20,9 @@ public class ClazzException extends RuntimeException {
      * @param className имя класса.
      */
     public ClazzException(String className) {
-        super("Error with class '" + className + "'. No @Named found" );
+        super("Error with class '" + className + "'. No @Named found");
         MDC.put("beanName", className);
         log.error("No @Named for this clas");
         MDC.remove("beanName");
     }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 72a11a2 (1) Добавлены тесты для части сканирования)
