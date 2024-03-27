@@ -52,6 +52,7 @@ public class BeanInstanceService {
     public <T> T getBean(String name) {
         MDC.put("beanName", name);
         log.info("Attempting to get bean by class name");
+        MDC.remove("beanName");
         BeanDefinition definition = null;
         var allBeans = beanContainer.getBeanDefinitions();
         definition = allBeans.get(name);
@@ -74,6 +75,9 @@ public class BeanInstanceService {
                 throw new WrongJsonException(definition.getName(),".No such bean scope: " + definition.getScope());
             }
         };
+        if (definition.getScope().equals("prototype")){
+            invokePostConstruct(result, definition);
+        }
         MDC.put("beanName", name);
         log.info("Successfully retrieved bean");
         MDC.remove("beanName");
@@ -108,6 +112,7 @@ public class BeanInstanceService {
             String beanName = (beanDefinition.getName() != null) ? beanDefinition.getName() : beanDefinition.getClassName();
             if (!beanContainer.containsBean(beanName)) {
                 Object beanInstance = createBeanInstance(beanDefinition);
+                invokePostConstruct(beanInstance, beanDefinition);
                 if (scope.equals("thread")) {
                     beanContainer.registerThreadBeanInstance(beanDefinition, () -> createBeanInstance(beanDefinition));
                 } else if (scope.equals("singleton")) {
@@ -115,6 +120,27 @@ public class BeanInstanceService {
                 }
             }
         });
+    }
+
+    /**
+     * Вызов PostConstruct метода, привязанного к бину.
+     * В зависимости от цикла жизни бина этот метод вызывается в разное время.
+     * Например, у prototype бина этот метод вызывается только когда его прямо запрашивает,
+     * как и у бинов обёрнутых в Provider, а у бинов типа Singleton и thread этот метод вызывается после создания инстанса.
+     *
+     * @param beanInstance инстанс бина
+     * @param beanDefinition модель, описывающая бин
+     */
+    private void invokePostConstruct(Object beanInstance, BeanDefinition beanDefinition) {
+        Method postConstructMethod = beanDefinition.getPostConstructMethod();
+        if (postConstructMethod != null) {
+            try {
+                postConstructMethod.setAccessible(true);
+                postConstructMethod.invoke(beanInstance);
+            } catch (Exception e) {
+                throw new RuntimeException("Ошибка при вызове @PostConstruct для " + beanDefinition.getClassName(), e);
+            }
+        }
     }
 
     /**

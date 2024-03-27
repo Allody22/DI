@@ -40,12 +40,32 @@ public class BeanContainer {
 
     /**
      * Конструктор контейнера бинов, записывающий сюда всю просканированную информацию.
+     * Тут также устанавливается ShutDownHookService, который при остановке программы,
+     * вызовет все PreDestroy методы.
      *
      * @param dependencyScanningConfig конфиг сканирования.
      */
-    public BeanContainer(DependencyScanningConfig dependencyScanningConfig){
+    public BeanContainer(DependencyScanningConfig dependencyScanningConfig) {
         this.dependencyScanningConfig = dependencyScanningConfig;
         this.beanDefinitions = dependencyScanningConfig.getNameToBeanDefinitionMap();
+        new ShutdownHookService(this);
+    }
+
+    /**
+     * Ищем, существует ли такая модель prototype бина среди известных просканированных бинов.
+     *
+     * @param beanName название бина или название класса бина.
+     * @return найденная модель бина или null иначе.
+     */
+    public BeanDefinition findPrototypeBeanDefinition(String beanName) {
+        for (var currentBean : beanDefinitions.values()) {
+            if (currentBean.getName().equals(beanName) || currentBean.getClassName().equals(beanName)) {
+                if (currentBean.getScope().equals("prototype")) {
+                    return currentBean;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -56,10 +76,10 @@ public class BeanContainer {
      * метод возвращает {@code null}.
      *
      * @param name имя бина, инстанс которого необходимо получить. Не должно быть {@code null}.
-     * @param <T> ожидаемый тип возвращаемого бина. Предостережение: тип не проверяется при выполнении,
-     *            поэтому неправильное использование может привести к {@code ClassCastException}.
+     * @param <T>  ожидаемый тип возвращаемого бина. Предостережение: тип не проверяется при выполнении,
+     *             поэтому неправильное использование может привести к {@code ClassCastException}.
      * @return инстанс бина типа "thread" для текущего потока или {@code null}, если такой бин не найден
-     *         или имя {@code name} не соответствует бину типа "thread".
+     * или имя {@code name} не соответствует бину типа "thread".
      */
     @SuppressWarnings("all")
     public <T> T getThreadLocalBean(String name) {
@@ -85,7 +105,7 @@ public class BeanContainer {
      * Регистрируем инстанс синглетон бина и сохраняем его в контейнер.
      *
      * @param beanDefinition модель бина, чтобы получить его известное имя.
-     * @param beanInstance инстанс бина.
+     * @param beanInstance   инстанс бина.
      */
     public void registerSingletonBeanInstance(@NonNull BeanDefinition beanDefinition, Object beanInstance) {
         MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
@@ -98,7 +118,7 @@ public class BeanContainer {
      * Регистрируем инстанс потокового бина и сохраняем его в контейнер.
      *
      * @param beanDefinition модель бина, чтобы получить его известное имя.
-     * @param beanSupplier инстанс потокового бина, обёрнутый в Supplier, чтобы он сохранился в определённый поток.
+     * @param beanSupplier   инстанс потокового бина, обёрнутый в Supplier, чтобы он сохранился в определённый поток.
      */
     public void registerThreadBeanInstance(@NonNull BeanDefinition beanDefinition, Supplier<?> beanSupplier) {
         MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
@@ -111,7 +131,7 @@ public class BeanContainer {
      * Регистрируем модель собственного бина и сохраняем его в контейнер.
      *
      * @param beanDefinition модель бина.
-     * @param beanInstance инстанс бина.
+     * @param beanInstance   инстанс бина.
      */
     public void registerCustomBeanBeanInstance(@NonNull BeanDefinition beanDefinition, Object beanInstance) {
         MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
