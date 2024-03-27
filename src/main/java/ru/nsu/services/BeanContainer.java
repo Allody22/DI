@@ -37,6 +37,16 @@ public class BeanContainer {
 
     private DependencyScanningConfig dependencyScanningConfig;
 
+    /**
+     * Специальный тестовый метода для вызова PreDestroy аннотаций у бинов.
+     */
+    public void testCleanup() {
+        if (!"test".equals(System.getProperty("environment"))) {
+            throw new IllegalStateException("This method is intended for testing purposes only.");
+        }
+        new ShutdownHookService(this).cleanupBeansForTest();
+    }
+
 
     /**
      * Конструктор контейнера бинов, записывающий сюда всю просканированную информацию.

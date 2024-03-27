@@ -5,6 +5,7 @@ import org.slf4j.MDC;
 import ru.nsu.exception.PreDestroyException;
 import ru.nsu.model.BeanDefinition;
 
+import javax.inject.Provider;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
@@ -27,6 +28,16 @@ public class ShutdownHookService {
     }
 
     /**
+     * Метод для вызова искусственного тестового уничтожения бинов
+     * и проверки обработки PreDestroy аннотации. Этот метод вызывает приватный метод уничтожения,
+     * чтобы не нарушить логику DI цикла жизни.
+     */
+    public void cleanupBeansForTest() {
+        cleanupBeans();
+    }
+
+
+    /**
      * Метод, который вызывает срабатывание PreDestroy аннотации.
      * Сначала метод проходится по всем синглетон бинам в текущем DI контейнере,
      * затем внутри каждого из них проходится по полям и смотрит, является ли это поле prototype бином,
@@ -41,7 +52,12 @@ public class ShutdownHookService {
                 for (Field field : singletonInstance.getClass().getDeclaredFields()) {
                     try {
                         field.setAccessible(true);
+
                         Object potentialPrototypeDependency = field.get(singletonInstance);
+
+                        if (potentialPrototypeDependency instanceof Provider) {
+                            continue;
+                        }
                         if (potentialPrototypeDependency != null) {
                             BeanDefinition prototypeBeanDefinition = beanContainer.findPrototypeBeanDefinition(potentialPrototypeDependency.getClass().getName());
                             if (prototypeBeanDefinition != null && prototypeBeanDefinition.getPreDestroyMethod() != null) {
@@ -65,6 +81,10 @@ public class ShutdownHookService {
                     try {
                         field.setAccessible(true);
                         Object potentialPrototypeDependency = field.get(threadLocalInstance);
+
+                        if (potentialPrototypeDependency instanceof Provider) {
+                            continue;
+                        }
                         if (potentialPrototypeDependency != null) {
                             BeanDefinition prototypeBeanDefinition = beanContainer.findPrototypeBeanDefinition(potentialPrototypeDependency.getClass().getName());
                             if (prototypeBeanDefinition != null && prototypeBeanDefinition.getPreDestroyMethod() != null) {

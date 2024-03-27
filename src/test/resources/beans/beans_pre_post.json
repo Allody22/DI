@@ -1,0 +1,27 @@
+{
+  "beans": [
+    {
+      "name": "myServiceImplementation",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeProperty": "value1",
+        "setAnotherProperty": 5
+      }
+    },
+    {
+      "name": "myRepositoryImpl",
+      "scope": "prototype",
+      "initParams": {
+        "setDataSource": "myDataSource"
+      }
+    } ,
+    {
+      "name": "mySmsServiceImplementation",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeProperty": "value1",
+        "setAnotherProperty": 5
+      }
+    }
+  ]
+}
