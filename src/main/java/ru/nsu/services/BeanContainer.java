@@ -31,6 +31,8 @@ public class BeanContainer {
 
     private Map<String, Object> singletonInstances = new HashMap<>();
 
+    private List<String> orderedByDependenciesBeans = new ArrayList<>();
+
     private Map<String, ThreadLocal<Object>> threadInstances = new HashMap<>();
 
     private Map<String, Object> customBean = new HashMap<>();
@@ -58,6 +60,14 @@ public class BeanContainer {
     public BeanContainer(DependencyScanningConfig dependencyScanningConfig) {
         this.dependencyScanningConfig = dependencyScanningConfig;
         this.beanDefinitions = dependencyScanningConfig.getNameToBeanDefinitionMap();
+        DependencyResolver resolver = new DependencyResolver(beanDefinitions);
+
+        if (resolver.detectCycles()) {
+            throw new RuntimeException("Detected cyclic dependencies among beans");
+        } else {
+            this.orderedByDependenciesBeans = resolver.resolveDependencies();
+        }
+
         new ShutdownHookService(this);
     }
 

@@ -11,7 +11,7 @@ import ru.nsu.services.DependencyScanningConfig;
 
 import java.io.IOException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Тесты на простых файлах участием JSON конфигурации и javax.injection.

@@ -2,12 +2,14 @@ package ru.nsu.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import ru.nsu.exception.NoDependencyException;
 import ru.nsu.exception.PreDestroyException;
 import ru.nsu.model.BeanDefinition;
 
 import javax.inject.Provider;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Collections;
 
 /**
  * Сервис, отвечающий за вызов PreDestroy методов, если он имеется, у всех бинов.
@@ -45,60 +47,52 @@ public class ShutdownHookService {
      * Потом аналогичные действия происходят и для бинов типа thread.
      */
     private void cleanupBeans() {
+        var beanDefinitions = beanContainer.getOrderedByDependenciesBeans();
         var singletonInstances = beanContainer.getSingletonInstances();
-        singletonInstances.forEach((name, singletonInstance) -> {
-            BeanDefinition singletonDefinition = beanContainer.getBeanDefinitions().get(name);
-            if (singletonDefinition != null) {
-                for (Field field : singletonInstance.getClass().getDeclaredFields()) {
-                    try {
-                        field.setAccessible(true);
+        Collections.reverse(beanDefinitions);
+        for (var currentBeanName : beanDefinitions) {
+            BeanDefinition beanDefinition = beanContainer.getBeanDefinitions().get(currentBeanName);
+            Object beanInstance = null;
+            if (beanDefinition == null) {
+                throw new RuntimeException("Почему-то такого бина нет");
+            }
+            if (beanDefinition.getScope().equals("singleton")) {
+                beanInstance = singletonInstances.get(currentBeanName);
+            } else if (beanDefinition.getScope().equals("thread")) {
+                beanInstance = beanContainer.getThreadLocalBean(currentBeanName);
+            } else if (beanDefinition.getScope().equals("prototype")) {
+                continue;
+            }
+            if (beanInstance == null) {
+                throw new NoDependencyException(currentBeanName, "Error in shutdownHookService, can't found bean instance with this name.");
+            }
+            checkForPrototypeBeans(beanInstance);
+            invokePreDestroy(beanInstance, beanDefinition);
 
-                        Object potentialPrototypeDependency = field.get(singletonInstance);
+        }
+    }
 
-                        if (potentialPrototypeDependency instanceof Provider) {
-                            continue;
-                        }
-                        if (potentialPrototypeDependency != null) {
-                            BeanDefinition prototypeBeanDefinition = beanContainer.findPrototypeBeanDefinition(potentialPrototypeDependency.getClass().getName());
-                            if (prototypeBeanDefinition != null && prototypeBeanDefinition.getPreDestroyMethod() != null) {
-                                invokePreDestroy(potentialPrototypeDependency, prototypeBeanDefinition);
-                            }
-                        }
-                    } catch (IllegalAccessException e) {
-                        throw new PreDestroyException(field.getName(), "Exception with PreDestroy method " +
-                                "of the prototype field of the singleton bean");
+    public void checkForPrototypeBeans(Object beanInstance) {
+        for (Field field : beanInstance.getClass().getDeclaredFields()) {
+            try {
+                field.setAccessible(true);
+
+                Object potentialPrototypeDependency = field.get(beanInstance);
+
+                if (potentialPrototypeDependency instanceof Provider) {
+                    potentialPrototypeDependency = ((Provider<?>) potentialPrototypeDependency).get();
+                }
+                if (potentialPrototypeDependency != null) {
+                    BeanDefinition prototypeBeanDefinition = beanContainer.findPrototypeBeanDefinition(potentialPrototypeDependency.getClass().getName());
+                    if (prototypeBeanDefinition != null && prototypeBeanDefinition.getPreDestroyMethod() != null) {
+                        invokePreDestroy(potentialPrototypeDependency, prototypeBeanDefinition);
                     }
                 }
-                invokePreDestroy(singletonInstance, singletonDefinition);
+            } catch (IllegalAccessException e) {
+                throw new PreDestroyException(field.getName(), "Exception with PreDestroy method " +
+                        "of the prototype field of the singleton bean");
             }
-        });
-
-        var threadBeans = beanContainer.getThreadInstances();
-        threadBeans.forEach((name, threadLocalInstance) -> {
-            BeanDefinition threadDefinition = beanContainer.getBeanDefinitions().get(name);
-            if (threadDefinition != null) {
-                for (Field field : threadLocalInstance.getClass().getDeclaredFields()) {
-                    try {
-                        field.setAccessible(true);
-                        Object potentialPrototypeDependency = field.get(threadLocalInstance);
-
-                        if (potentialPrototypeDependency instanceof Provider) {
-                            continue;
-                        }
-                        if (potentialPrototypeDependency != null) {
-                            BeanDefinition prototypeBeanDefinition = beanContainer.findPrototypeBeanDefinition(potentialPrototypeDependency.getClass().getName());
-                            if (prototypeBeanDefinition != null && prototypeBeanDefinition.getPreDestroyMethod() != null) {
-                                invokePreDestroy(potentialPrototypeDependency, prototypeBeanDefinition);
-                            }
-                        }
-                    } catch (IllegalAccessException e) {
-                        throw new PreDestroyException(field.getName(), "Exception with PreDestroy method " +
-                                "of the prototype field of the singleton bean");
-                    }
-                }
-                invokePreDestroy(threadLocalInstance, threadDefinition);
-            }
-        });
+        }
     }
 
     /**

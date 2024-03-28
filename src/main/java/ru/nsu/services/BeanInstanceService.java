@@ -3,10 +3,7 @@ package ru.nsu.services;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
-import ru.nsu.exception.ConstructorException;
-import ru.nsu.exception.NoDependencyException;
-import ru.nsu.exception.SetterException;
-import ru.nsu.exception.WrongJsonException;
+import ru.nsu.exception.*;
 import ru.nsu.model.BeanDefinition;
 
 import javax.inject.Named;
@@ -16,6 +13,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,9 +43,9 @@ public class BeanInstanceService {
      * то выпадет соответствующая ошибка.
      *
      * @param name имя бина.
+     * @param <T>  ожидаемый тип возвращаемого бина. Предостережение: тип не проверяется при выполнении,
+     *             поэтому неправильное использование может привести к {@code ClassCastException}.
      * @return инстанс бина.
-     * @param <T> ожидаемый тип возвращаемого бина. Предостережение: тип не проверяется при выполнении,
-     *            поэтому неправильное использование может привести к {@code ClassCastException}.
      */
     @SuppressWarnings("all")
     public <T> T getBean(String name) {
@@ -72,10 +71,10 @@ public class BeanInstanceService {
                 MDC.put("beanName", name);
                 log.warn("No such bean scope: " + definition.getScope());
                 MDC.remove("beanName");
-                throw new WrongJsonException(definition.getName(),".No such bean scope: " + definition.getScope());
+                throw new WrongJsonException(definition.getName(), ".No such bean scope: " + definition.getScope());
             }
         };
-        if (definition.getScope().equals("prototype")){
+        if (definition.getScope().equals("prototype")) {
             invokePostConstruct(result, definition);
         }
         MDC.put("beanName", name);
@@ -89,17 +88,56 @@ public class BeanInstanceService {
      * Бины типа prototype не сохраняются, потому что они запрашиваются
      * и создаются каждый раз по своей природе.
      */
+//    public void instantiateAndRegisterBeans() {
+//        var singletonBeans = beanContainer.getDependencyScanningConfig().getSingletonScopes();
+//        var threadBeans = beanContainer.getDependencyScanningConfig().getThreadScopes();
+//
+//        System.out.println("singleton beans = " + singletonBeans);
+//        // Обработка singleton бинов
+//        instantiateAndRegisterScopeBeans(singletonBeans, "singleton");
+//        // Обработка thread бинов
+//        instantiateAndRegisterScopeBeans(threadBeans, "thread");
+//    }
+
+
     public void instantiateAndRegisterBeans() {
-        var singletonBeans = beanContainer.getDependencyScanningConfig().getSingletonScopes();
-        var threadBeans = beanContainer.getDependencyScanningConfig().getThreadScopes();
+        var beanDefinitions = beanContainer.getBeanDefinitions();
 
-        // Обработка singleton бинов
-        instantiateAndRegisterScopeBeans(singletonBeans, "singleton");
-        // Обработка thread бинов
-        instantiateAndRegisterScopeBeans(threadBeans, "thread");
+        DependencyResolver resolver = new DependencyResolver(beanDefinitions);
 
-        //TODO кастомный скоуп
+        // Обнаружение циклических зависимостей
+        if (resolver.detectCycles()) {
+            throw new RuntimeException("Detected cyclic dependencies among beans");
+        }
+
+        // Получаем список имен бинов, упорядоченных по зависимостям
+        List<String> orderedBeanNames = resolver.resolveDependencies();
+        Collections.reverse(orderedBeanNames);
+        // Проходим по упорядоченному списку и создаем/регистрируем бины
+        orderedBeanNames.forEach(beanName -> {
+            BeanDefinition beanDefinition = beanDefinitions.get(beanName);
+            instantiateAndRegisterBean(beanDefinition);
+        });
     }
+
+
+    private void instantiateAndRegisterBean(BeanDefinition beanDefinition) {
+            String beanName = (beanDefinition.getName() != null) ? beanDefinition.getName() : beanDefinition.getClassName();
+            String beanScope = beanDefinition.getScope();
+            if (beanScope.equals("prototype")){
+                return;
+            }
+            if (!beanContainer.containsBean(beanName)) {
+                Object beanInstance = createBeanInstance(beanDefinition);
+                invokePostConstruct(beanInstance, beanDefinition);
+                if (beanScope.equals("thread")) {
+                    beanContainer.registerThreadBeanInstance(beanDefinition, () -> createBeanInstance(beanDefinition));
+                } else if (beanScope.equals("singleton")) {
+                    beanContainer.registerSingletonBeanInstance(beanDefinition, beanInstance);
+                }
+            }
+        };
+
 
     /**
      * Запускается процесс создания инстанса бинов.
@@ -128,7 +166,7 @@ public class BeanInstanceService {
      * Например, у prototype бина этот метод вызывается только когда его прямо запрашивает,
      * как и у бинов обёрнутых в Provider, а у бинов типа Singleton и thread этот метод вызывается после создания инстанса.
      *
-     * @param beanInstance инстанс бина
+     * @param beanInstance   инстанс бина
      * @param beanDefinition модель, описывающая бин
      */
     private void invokePostConstruct(Object beanInstance, BeanDefinition beanDefinition) {
@@ -137,8 +175,11 @@ public class BeanInstanceService {
             try {
                 postConstructMethod.setAccessible(true);
                 postConstructMethod.invoke(beanInstance);
+                MDC.put("beanName", beanDefinition.getName());
+                log.info("Successfully started PostConstruct method");
+                MDC.remove("beanName");
             } catch (Exception e) {
-                throw new RuntimeException("Ошибка при вызове @PostConstruct для " + beanDefinition.getClassName(), e);
+                throw new PostConstructException(beanDefinition.getName(), "Failed to invoke PostConstruct method");
             }
         }
     }
@@ -168,14 +209,25 @@ public class BeanInstanceService {
             Object[] constructorParams = resolveConstructorParameters(constructor);
             Object instance = constructor.newInstance(constructorParams);
 
-            var injectedField = beanDefinition.getInjectedFields();
+            var injectedFields = beanDefinition.getInjectedFields();
+            var injectedProviderFields = beanDefinition.getInjectedProviderFields();
 
-            if (injectedField != null && !injectedField.isEmpty()) {
-                for (Field field : injectedField) {
-                    field.setAccessible(true); // Делаем поле доступным, если оно не публичное
-                    Named namedAnnotation = field.getAnnotation(Named.class);
-                    Object fieldValue = getBean(namedAnnotation != null ? namedAnnotation.value() : field.getName());
-                    field.set(instance, fieldValue); // Внедряем зависимость
+            //Внедряем все поля-зависимости, если они есть
+            if (injectedFields != null && !injectedFields.isEmpty()) {
+                for (Field field : injectedFields) {
+                    field.setAccessible(true);
+                    Object fieldInstance = injectField(field);
+                    field.set(instance, fieldInstance);
+                }
+            }
+
+
+            if (injectedProviderFields != null && !injectedProviderFields.isEmpty()) {
+                for (Field field : injectedProviderFields) {
+                    field.setAccessible(true);
+                    Object fieldInstance = injectField(field);
+                    Provider<?> providerField = () -> fieldInstance;
+                    field.set(instance, providerField);
                 }
             }
 
@@ -183,8 +235,53 @@ public class BeanInstanceService {
             applyInitParams(instance, beanDefinition.getInitParams());
             return instance;
         } catch (Exception e) {
-            throw new ConstructorException(beanName,"Failed to create instance");
+            throw new ConstructorException(beanName, "Failed to create instance. " + e.getMessage());
         }
+    }
+
+    /**
+     * Код для внедрения полей-зависимостей, то есть полей,
+     * помеченных аннотацией Named и Inject
+     *
+     * @param field сущность поля.
+     * @return созданный инстанс зависимости для дальнейшего внедрения.
+     */
+    private Object injectField(Field field) {
+        field.setAccessible(true);
+        Named namedAnnotation = field.getAnnotation(Named.class);
+        String actualName = (namedAnnotation != null ? namedAnnotation.value() : field.getName());
+        Object fieldInstance = getBean(actualName);
+        BeanDefinition newFieldBeanDefinition = null;
+        if (fieldInstance == null) {
+            newFieldBeanDefinition = beanContainer.getBeanDefinitions().get(actualName);
+            fieldInstance = createAndRegisterBeanDependency(newFieldBeanDefinition);
+        }
+        return fieldInstance;
+    }
+
+    /**
+     * Метод, чтобы создать бин-зависимость для другого бина,
+     * то есть когда мы пытаемся внедрить бин, который еще не был создан
+     * или имеет тип prototype, то мы вызываем этот метод.
+     *
+     * @param beanDefinition модель бина.
+     * @return инстанс бина.
+     */
+    private Object createAndRegisterBeanDependency(BeanDefinition beanDefinition) {
+        Object beanInstance = createBeanInstance(beanDefinition);
+        invokePostConstruct(beanInstance, beanDefinition);
+        switch (beanDefinition.getScope()) {
+            case "thread" ->
+                    beanContainer.registerThreadBeanInstance(beanDefinition, () -> createBeanInstance(beanDefinition));
+            case "singleton" -> beanContainer.registerSingletonBeanInstance(beanDefinition, beanInstance);
+            case "prototype" -> {
+            }
+        }
+        if (beanInstance == null) {
+            throw new NoDependencyException(beanDefinition.getName(), "Error in creating of dependency, can't create instance for this name.");
+        }
+
+        return beanInstance;
     }
 
     /**
@@ -216,8 +313,8 @@ public class BeanInstanceService {
                         break;
                     }
                 }
-                Object paramsResult = null;
-                String actualName = null;
+                Object paramsResult;
+                String actualName;
 
                 // Определяем actualName в зависимости от того, задано ли namedValue.
                 actualName = (namedValue != null) ? namedValue : paramTypes[i].getName();
@@ -228,18 +325,9 @@ public class BeanInstanceService {
                 // Если bean не найден, создаем его инстанс.
                 if (paramsResult == null) {
                     BeanDefinition beanDefinition = beanContainer.getBeanDefinitions().get(actualName);
-                    paramsResult = createBeanInstance(beanDefinition);
-                    switch (beanDefinition.getScope()) {
-                        case "thread" ->
-                                beanContainer.registerThreadBeanInstance(beanDefinition, () -> createBeanInstance(beanDefinition));
-                        case "singleton" -> beanContainer.registerSingletonBeanInstance(beanDefinition, paramsResult);
-                        case "prototype" -> beanContainer.registerCustomBeanBeanInstance(beanDefinition, paramsResult);
-                    }
+                    paramsResult = createAndRegisterBeanDependency(beanDefinition);
                 }
 
-                if (paramsResult == null){
-                    throw new NoDependencyException(actualName);
-                }
                 params[i] = paramsResult;
             }
         }
@@ -250,11 +338,11 @@ public class BeanInstanceService {
     /**
      * Установка параметров (полей) в инстанс бина.
      *
-     * @param instance уже готовый, созданный инстанс бина
+     * @param instance   уже готовый, созданный инстанс бина
      * @param initParams параметры бина, полученные из конфигурации.
      */
     private void applyInitParams(Object instance, Map<String, Object> initParams) {
-        if (initParams == null) {
+        if (initParams == null || initParams.isEmpty()) {
             return;
         }
         for (Map.Entry<String, Object> entry : initParams.entrySet()) {
@@ -272,9 +360,9 @@ public class BeanInstanceService {
     /**
      * Поиск метода для установки параметров определённого типа в инстанс бина.
      *
-     * @param clazz класс, параметры готова мы ищем.
+     * @param clazz      класс, параметры готова мы ищем.
      * @param methodName название метода.
-     * @param value значение параметра.
+     * @param value      значение параметра.
      * @return сущность метод из рефлексии.
      * @throws NoSuchMethodException ошибка, в случае когда метод не был найден.
      */

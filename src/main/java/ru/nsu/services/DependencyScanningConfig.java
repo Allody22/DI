@@ -122,8 +122,7 @@ public class DependencyScanningConfig {
                     }
                     case "singleton" -> singletonScopes.put(namedAnnotationValue, beanDefinition);
                     case "thread" -> threadScopes.put(namedAnnotationValue, beanDefinition);
-                    //TODO кастомный скоуп?
-                    default -> unknownScopes.put(namedAnnotationValue, beanDefinition);
+                    default -> throw new WrongJsonException(namedAnnotationValue, "Unknown bean scope " + beanDefinition.getScope());
                 }
             }
         }
@@ -230,7 +229,7 @@ public class DependencyScanningConfig {
                 case "prototype" -> {
                 }
                 case "thread" -> threadScopes.put(beanName, beanDefinition);
-                default -> unknownScopes.put(beanName, beanDefinition);
+                default -> throw new WrongJsonException(beanName, "Unknown bean scope.");
             }
             nameToBeanDefinitionMap.put(beanName, beanDefinition);
         }
