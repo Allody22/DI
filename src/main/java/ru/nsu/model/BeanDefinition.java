@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
 
@@ -28,4 +29,7 @@ public class BeanDefinition {
 
     private Map<String, Object> initParams;
 
+    private Method postConstructMethod;
+
+    private Method preDestroyMethod;
 }

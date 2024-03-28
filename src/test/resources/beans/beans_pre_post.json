@@ -1,23 +1,26 @@
 {
   "beans": [
     {
-      "class": "ru.nsu.test.easy.MyService",
-      "name": "myService",
+      "name": "myServiceImplementation",
       "scope": "singleton",
       "initParams": {
         "setSomeProperty": "value1",
         "setAnotherProperty": 5
-      },
-      "constructorParams": [
-        "ru.nsu.test.easy.MyRepository"
-      ]
+      }
     },
     {
-      "class": "ru.nsu.test.easy.MyRepository",
       "name": "myRepositoryImpl",
       "scope": "prototype",
       "initParams": {
         "setDataSource": "myDataSource"
+      }
+    } ,
+    {
+      "name": "mySmsServiceImplementation",
+      "scope": "singleton",
+      "initParams": {
+        "setSomeProperty": "value1",
+        "setAnotherProperty": 5
       }
     }
   ]
