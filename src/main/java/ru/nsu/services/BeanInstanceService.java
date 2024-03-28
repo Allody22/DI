@@ -14,7 +14,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -84,34 +83,15 @@ public class BeanInstanceService {
     }
 
     /**
-     * Метод, который запускает создание всех известных бинов и их сохранение.
-     * Бины типа prototype не сохраняются, потому что они запрашиваются
-     * и создаются каждый раз по своей природе.
+     * Метод, который запускает DI цикл.
+     * Получается список моделей отсортированных бинов из контейнера,
+     * а затем эти бины начинают от наибольших (те у кого больше всего зависимостей)
+     * до наименьших (те у кого вообще нет зависимостей) создаваться.
      */
-//    public void instantiateAndRegisterBeans() {
-//        var singletonBeans = beanContainer.getDependencyScanningConfig().getSingletonScopes();
-//        var threadBeans = beanContainer.getDependencyScanningConfig().getThreadScopes();
-//
-//        System.out.println("singleton beans = " + singletonBeans);
-//        // Обработка singleton бинов
-//        instantiateAndRegisterScopeBeans(singletonBeans, "singleton");
-//        // Обработка thread бинов
-//        instantiateAndRegisterScopeBeans(threadBeans, "thread");
-//    }
-
-
     public void instantiateAndRegisterBeans() {
         var beanDefinitions = beanContainer.getBeanDefinitions();
+        var orderedBeanNames = beanContainer.getOrderedByDependenciesBeans();
 
-        DependencyResolver resolver = new DependencyResolver(beanDefinitions);
-
-        // Обнаружение циклических зависимостей
-        if (resolver.detectCycles()) {
-            throw new RuntimeException("Detected cyclic dependencies among beans");
-        }
-
-        // Получаем список имен бинов, упорядоченных по зависимостям
-        List<String> orderedBeanNames = resolver.resolveDependencies();
         Collections.reverse(orderedBeanNames);
         // Проходим по упорядоченному списку и создаем/регистрируем бины
         orderedBeanNames.forEach(beanName -> {
@@ -120,7 +100,14 @@ public class BeanInstanceService {
         });
     }
 
-
+    /**
+     * Создаём и сохраняем инстанс определённого бина, основываясь на его модели.
+     * Этот метод запускаем с самого начала, вместе с запуском самого процесса DI, поэтому
+     * тут не создаются инстансы бинов типа prototype, их сущность создаётся по мере необходимости,
+     * то есть когда они запрашиваются.
+     *
+     * @param beanDefinition модель бина.
+     */
     private void instantiateAndRegisterBean(BeanDefinition beanDefinition) {
             String beanName = (beanDefinition.getName() != null) ? beanDefinition.getName() : beanDefinition.getClassName();
             String beanScope = beanDefinition.getScope();
@@ -136,29 +123,7 @@ public class BeanInstanceService {
                     beanContainer.registerSingletonBeanInstance(beanDefinition, beanInstance);
                 }
             }
-        };
-
-
-    /**
-     * Запускается процесс создания инстанса бинов.
-     *
-     * @param beans отношение названия бинов к их описание.
-     * @param scope тип жизненного цикла бинов.
-     */
-    private void instantiateAndRegisterScopeBeans(Map<String, BeanDefinition> beans, String scope) {
-        beans.values().forEach(beanDefinition -> {
-            String beanName = (beanDefinition.getName() != null) ? beanDefinition.getName() : beanDefinition.getClassName();
-            if (!beanContainer.containsBean(beanName)) {
-                Object beanInstance = createBeanInstance(beanDefinition);
-                invokePostConstruct(beanInstance, beanDefinition);
-                if (scope.equals("thread")) {
-                    beanContainer.registerThreadBeanInstance(beanDefinition, () -> createBeanInstance(beanDefinition));
-                } else if (scope.equals("singleton")) {
-                    beanContainer.registerSingletonBeanInstance(beanDefinition, beanInstance);
-                }
-            }
-        });
-    }
+        }
 
     /**
      * Вызов PostConstruct метода, привязанного к бину.
@@ -251,7 +216,7 @@ public class BeanInstanceService {
         Named namedAnnotation = field.getAnnotation(Named.class);
         String actualName = (namedAnnotation != null ? namedAnnotation.value() : field.getName());
         Object fieldInstance = getBean(actualName);
-        BeanDefinition newFieldBeanDefinition = null;
+        BeanDefinition newFieldBeanDefinition;
         if (fieldInstance == null) {
             newFieldBeanDefinition = beanContainer.getBeanDefinitions().get(actualName);
             fieldInstance = createAndRegisterBeanDependency(newFieldBeanDefinition);

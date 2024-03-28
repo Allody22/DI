@@ -15,14 +15,30 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Класс, созданный для сортировки бинов по количеству зависимостей
+ * и для проверки всех бинов на циклические зависимости.
+ */
 public class DependencyResolver {
 
     private final Map<String, BeanDefinition> beanDefinitions;
 
+    /**
+     * Конструктор класса.
+     *
+     * @param beanDefinitions отношение из названий бинов в их модели.
+     */
     public DependencyResolver(Map<String, BeanDefinition> beanDefinitions) {
         this.beanDefinitions = beanDefinitions;
     }
 
+    /**
+     * Ключевой метод, который создаёт граф, использующийся для топологической
+     * сортировки бинов по количеству зависимостей, а после этого граф проверяется на наличие цикла.
+     * Если цикл присутствует - то выбрасывается исключение с этой информацией.
+     *
+     * @return отсортированный список названий бинов.
+     */
     public List<String> resolveDependencies() {
         // Создание направленного графа
         DefaultDirectedGraph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
@@ -31,9 +47,12 @@ public class DependencyResolver {
         beanDefinitions.keySet().forEach(graph::addVertex);
 
         // Добавление рёбер на основе зависимостей
-        beanDefinitions.forEach((beanName, beanDefinition) -> {
-            addDependenciesToGraph(beanName, beanDefinition, graph);
-        });
+        beanDefinitions.forEach((beanName, beanDefinition) -> addDependenciesToGraph(beanName, beanDefinition, graph));
+
+        CycleDetector<String, DefaultEdge> cycleDetector = new CycleDetector<>(graph);
+        if (cycleDetector.detectCycles()){
+            throw new RuntimeException("Detected cyclic dependencies among beans");
+        }
 
         // Топологическая сортировка
         TopologicalOrderIterator<String, DefaultEdge> orderIterator = new TopologicalOrderIterator<>(graph);
@@ -43,6 +62,15 @@ public class DependencyResolver {
         return sortedBeans;
     }
 
+    /**
+     * Добавляет к текущему графу новую зависимость (ребро) из переданной модели.
+     * Сначала проверяются внедряемые поля, затем внедряемый поля-провайдеры,
+     * а затем и параметры конструктора, если через них проходит внедрение зависимостей.
+     *
+     * @param beanName имя бина.
+     * @param beanDefinition модель бина.
+     * @param graph исследуемый граф.
+     */
     private void addDependenciesToGraph(String beanName, BeanDefinition beanDefinition, DefaultDirectedGraph<String, DefaultEdge> graph) {
         // Исследуем injectedFields
         if (beanDefinition.getInjectedFields() != null) {
@@ -75,14 +103,5 @@ public class DependencyResolver {
                 }
             }
         }
-
-    }
-
-    public boolean detectCycles() {
-        DefaultDirectedGraph<String, DefaultEdge> graph = new DefaultDirectedGraph<>(DefaultEdge.class);
-        beanDefinitions.keySet().forEach(graph::addVertex);
-        beanDefinitions.forEach((beanName, beanDefinition) -> addDependenciesToGraph(beanName, beanDefinition, graph));
-        CycleDetector<String, DefaultEdge> cycleDetector = new CycleDetector<>(graph);
-        return cycleDetector.detectCycles();
     }
 }

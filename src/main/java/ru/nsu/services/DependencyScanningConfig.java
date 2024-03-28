@@ -128,6 +128,12 @@ public class DependencyScanningConfig {
         }
     }
 
+    /**
+     * Поиск метода для создания конструктора. Его логика вынесена для упрощения.
+     *
+     * @param clazz интересующий нас класс.
+     * @param beanDefinition модель, исследуемого бина.
+     */
     private void findConstructMethods(Class<?> clazz, BeanDefinition beanDefinition) {
         Method postConstructMethod = null;
         Method preDestroyMethod = null;

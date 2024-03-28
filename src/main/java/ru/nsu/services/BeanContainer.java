@@ -54,6 +54,9 @@ public class BeanContainer {
      * Конструктор контейнера бинов, записывающий сюда всю просканированную информацию.
      * Тут также устанавливается ShutDownHookService, который при остановке программы,
      * вызовет все PreDestroy методы.
+     * На этой стадии также идёт проверка бинов на циклические зависимости
+     * с помощью DependencyResolver, который представляет все связи бинов как граф,
+     * а с помощью специального готово метода потом проверяет его на цикл.
      *
      * @param dependencyScanningConfig конфиг сканирования.
      */
@@ -62,11 +65,8 @@ public class BeanContainer {
         this.beanDefinitions = dependencyScanningConfig.getNameToBeanDefinitionMap();
         DependencyResolver resolver = new DependencyResolver(beanDefinitions);
 
-        if (resolver.detectCycles()) {
-            throw new RuntimeException("Detected cyclic dependencies among beans");
-        } else {
-            this.orderedByDependenciesBeans = resolver.resolveDependencies();
-        }
+        this.orderedByDependenciesBeans = resolver.resolveDependencies();
+
 
         new ShutdownHookService(this);
     }
@@ -145,19 +145,6 @@ public class BeanContainer {
         log.info("Registering thread-local bean instance");
         MDC.remove("beanName");
         threadInstances.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), ThreadLocal.withInitial(beanSupplier));
-    }
-
-    /**
-     * Регистрируем модель собственного бина и сохраняем его в контейнер.
-     *
-     * @param beanDefinition модель бина.
-     * @param beanInstance   инстанс бина.
-     */
-    public void registerCustomBeanBeanInstance(@NonNull BeanDefinition beanDefinition, Object beanInstance) {
-        MDC.put("beanName", (beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()));
-        log.info("Registering singleton bean instance for class");
-        MDC.remove("beanName");
-        customBean.put((beanDefinition.getName() != null ? beanDefinition.getName() : beanDefinition.getClassName()), beanInstance);
     }
 
     /**
