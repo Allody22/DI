@@ -1,0 +1,12 @@
+{
+  "beans": [
+    {
+      "name": "myServiceImplementation",
+      "scope": "singleton"
+    },
+    {
+      "name": "myRepositoryImpl",
+      "scope": "singleton"
+    }
+  ]
+}

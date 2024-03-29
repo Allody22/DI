@@ -1,6 +1,8 @@
 package ru.nsu.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
@@ -21,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -67,6 +70,7 @@ public class DependencyScanningConfig {
 
         for (Class<?> clazz : allClasses) {
             if (!clazz.isInterface() && isAvailableForInjection(clazz)) {
+                BeanDefinition beanDefinition = new BeanDefinition();
                 String namedAnnotationValue = Optional.ofNullable(clazz.getAnnotation(Named.class))
                         .map(Named::value)
                         .orElseThrow(() -> new ClazzException(clazz.getCanonicalName()));
@@ -103,23 +107,57 @@ public class DependencyScanningConfig {
                 if ((!injectedFields.isEmpty() && isConstructorFound) || (!injectedProviderFields.isEmpty() && isConstructorFound)) {
                     throw new ConstructorException(clazz.getCanonicalName(), "Only one type of injection is available: fields or constructors");
                 }
+                beanDefinition.setClassName(clazz.getCanonicalName());
+                beanDefinition.setName(namedAnnotationValue);
+                beanDefinition.setScope(beanDefinitionReader.getScope());
+                beanDefinition.setInjectedFields(injectedFields.isEmpty() ? null : injectedFields);
+                beanDefinition.setInjectedProviderFields(injectedProviderFields.isEmpty() ? null : injectedProviderFields);
+                beanDefinition.setConstructor(selectedConstructor);
+                beanDefinition.setInitParams(beanDefinitionReader.getInitParams());
+                findConstructMethods(clazz, beanDefinition);
 
-                BeanDefinition beanDefinition = new BeanDefinition(
-                        clazz.getCanonicalName(), namedAnnotationValue, beanDefinitionReader.getScope(),
-                        injectedFields.isEmpty() ? null : injectedFields,
-                        injectedProviderFields.isEmpty() ? null : injectedProviderFields,
-                        selectedConstructor, beanDefinitionReader.getInitParams());
                 this.nameToBeanDefinitionMap.put(namedAnnotationValue, beanDefinition);
                 switch (beanDefinitionReader.getScope()) {
                     case "prototype" -> {
                     }
                     case "singleton" -> singletonScopes.put(namedAnnotationValue, beanDefinition);
                     case "thread" -> threadScopes.put(namedAnnotationValue, beanDefinition);
-                    //TODO кастомный скоуп?
-                    default -> unknownScopes.put(namedAnnotationValue, beanDefinition);
+                    default -> throw new WrongJsonException(namedAnnotationValue, "Unknown bean scope " + beanDefinition.getScope());
                 }
             }
         }
+    }
+
+    /**
+     * Поиск метода для создания конструктора. Его логика вынесена для упрощения.
+     *
+     * @param clazz интересующий нас класс.
+     * @param beanDefinition модель, исследуемого бина.
+     */
+    private void findConstructMethods(Class<?> clazz, BeanDefinition beanDefinition) {
+        Method postConstructMethod = null;
+        Method preDestroyMethod = null;
+
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(PostConstruct.class) && method.getParameterCount() == 0) {
+                if (postConstructMethod == null) {
+                    postConstructMethod = method;
+                } else {
+                    throw new IllegalStateException("@PostConstruct annotation found on multiple methods in " + clazz.getName());
+                }
+            }
+
+            if (method.isAnnotationPresent(PreDestroy.class) && method.getParameterCount() == 0) {
+                if (preDestroyMethod == null) {
+                    preDestroyMethod = method;
+                } else {
+                    throw new IllegalStateException("@PreDestroy annotation found on multiple methods in " + clazz.getName());
+                }
+            }
+        }
+
+        beanDefinition.setPostConstructMethod(postConstructMethod);
+        beanDefinition.setPreDestroyMethod(preDestroyMethod);
     }
 
     /**
@@ -141,6 +179,7 @@ public class DependencyScanningConfig {
             }
         }
     }
+
 
     /**
      * Считываем json конфигурацию бинов и получаем их модель.
@@ -196,7 +235,7 @@ public class DependencyScanningConfig {
                 case "prototype" -> {
                 }
                 case "thread" -> threadScopes.put(beanName, beanDefinition);
-                default -> unknownScopes.put(beanName, beanDefinition);
+                default -> throw new WrongJsonException(beanName, "Unknown bean scope.");
             }
             nameToBeanDefinitionMap.put(beanName, beanDefinition);
         }

@@ -20,10 +20,10 @@ public class NoDependencyException extends RuntimeException {
      *
      * @param name имя бина, который связан с ошибкой.
      */
-    public NoDependencyException(String name) {
-        super("No dependency with name '" + name + "'");
+    public NoDependencyException(String name, String description) {
+        super("No dependency with name '" + name + "'. Description = " + description);
         MDC.put("beanName", name);
-        log.error("No bean with this name found for params");
+        log.error("No bean with this name found injections. " + description);
         MDC.remove("beanName");
     }
 }
